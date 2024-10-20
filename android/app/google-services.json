@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "514773947111",
+    "project_id": "music-app-5613a",
+    "storage_bucket": "music-app-5613a.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:514773947111:android:1158937ab416386a470842",
+        "android_client_info": {
+          "package_name": "com.shubha.music"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAbe1z2_NBqRMY6rVWg0xtX6j76Hx1rAMU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
