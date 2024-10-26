@@ -7,16 +7,15 @@ import 'package:music_app/Artists.dart';
 import 'package:music_app/playlists.dart';
 import 'package:music_app/quick_picks.dart';
 import 'package:music_app/songs.dart';
-const flutterColor = Color(0xFF40D0FD);
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+class Dashboard extends StatefulWidget {
+  const Dashboard({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  State<Dashboard> createState() => _DashboardState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _DashboardState extends State<Dashboard> {
 
 
   // bool isSelected = false;
@@ -52,8 +51,11 @@ class _LoginPageState extends State<LoginPage> {
       
         primaryColors: const [
           Colors.pink,
+
           Colors.pinkAccent,
-          Colors.deepOrange,
+    
+          Colors.white,
+
         ],
         secondaryColors: const [
           Colors.blue,
@@ -65,7 +67,7 @@ class _LoginPageState extends State<LoginPage> {
 
       AnimatedContainer(
         duration: const Duration(milliseconds: 5000),
-        color: Colors.black.withOpacity(0.6),
+        color: Colors.black.withOpacity(0.1),
         child: const SizedBox.expand(),),
            Row(
              children: [
@@ -214,35 +216,13 @@ class _LoginPageState extends State<LoginPage> {
                    ),
                  ],
                ),
-          
-          // Expanded(
-          //   child: AnimatedSwitcher(
-          //     duration: Duration(milliseconds: 500),
-          //     transitionBuilder: (Widget child, Animation<double> animation) {
-          //       final slideAnimation = Tween<Offset>(
-          //         begin: Offset(0.0, 1.0), // Slide in from bottom
-          //         end: Offset(0.0, 0.0),
-          //       ).animate(animation);
-
-          //       return ClipRect( // Clip overflow if needed
-          //         child: SlideTransition(
-          //           position: slideAnimation,
-          //           child: child,
-          //         ),
-          //       );
-          //     },
-          //     child: SizedBox.expand( // Constraining the size
-          //       key: ValueKey<int>(pageIndex), // Key must be unique for AnimatedSwitcher to work properly
-          //       child: pages[pageIndex],
-          //     ),
-          //   )),
 
             Expanded(
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 500),
                 transitionBuilder: (Widget child, Animation<double> animation) {
                   final slideAnimation = Tween<Offset>(
-                    begin: const Offset(1.0, 0.0), // Slide in from right
+                    begin: const Offset(0.0, 1.0), // Slide in from right
                     end: const Offset(0.0, 0.0),
                   ).animate(animation);
               
@@ -253,13 +233,7 @@ class _LoginPageState extends State<LoginPage> {
                 },
                 child: pages[pageIndex],
               ),
-            )
-
-
-           
-
-
-
+            ),
              ],
            ),
         ],
