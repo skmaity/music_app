@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:animate_gradient/animate_gradient.dart';
 import 'package:flutter/material.dart';
 // import 'package:flutter_glow/flutter_glow.dart';
-// import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:get/get.dart';
 import 'package:music_app/controller/song_controller.dart';
 import 'package:music_app/services/services.dart';
@@ -127,11 +127,18 @@ class _PlayerPageState extends State<PlayerPage> {
                     hoverElevation: 0,
                     focusElevation: 0,
                     highlightElevation: 0,
-                    // child: const GlowIcon(
-                    //   Ionicons.md_play_skip_back_outline,
-                    //   color: Colors.white,
-                    //   size: 22,
-                    // ),
+                    child: const Icon(
+                       shadows:   [
+                      Shadow(
+                        blurRadius: 9.0,
+                        color: Colors.white,
+                        offset: Offset(0, 0),
+                      ),
+                    ],
+                      Ionicons.md_play_skip_back_outline,
+                      color: Colors.white,
+                      size: 22,
+                    ),
                     onPressed: () {}),
                 Obx(
                   ()=> FloatingActionButton.large( 
@@ -146,11 +153,18 @@ class _PlayerPageState extends State<PlayerPage> {
                     hoverElevation: 0,
                     focusElevation: 0,
                     highlightElevation: 0,
-                    // child: GlowIcon(
-                    //   controller.isPlaying.value ? Feather.pause : Feather.play,
-                    //   color: Colors.white,
-                    //   size: 22,
-                    // ),
+                    child: Icon(
+                       shadows:  const [
+                       Shadow(
+                        blurRadius: 9.0,
+                        color: Colors.white,
+                        offset: Offset(0, 0),
+                      ),
+                    ],
+                      controller.isPlaying.value ? Feather.pause : Feather.play,
+                      color: Colors.white,
+                      size: 22,
+                    ),
                     onPressed: () async {
                       controller.isPlaying.value
                           ? controller.pausePlaying() 
@@ -171,11 +185,18 @@ class _PlayerPageState extends State<PlayerPage> {
                   hoverElevation: 0,
                   focusElevation: 0,
                   highlightElevation: 0,
-                  // child:  const GlowIcon(
-                  //   Ionicons.md_play_skip_forward_outline,
-                  //   color: Colors.white,
-                  //   size: 22,
-                  // ),
+                  child:  const Icon(
+                     shadows:  [
+                       Shadow(
+                        blurRadius: 9.0,
+                        color: Colors.white,
+                        offset: Offset(0, 0),
+                      ),
+                    ],
+                    Ionicons.md_play_skip_forward_outline,
+                    color: Colors.white,
+                    size: 22,
+                  ),
                   onPressed: () async {
                     if(services.quickpicks.length > controller.currentIndex.value+1){
                     controller.startPlaying(services.quickpicks[controller.currentIndex.value+1]);
