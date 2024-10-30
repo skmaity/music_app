@@ -36,7 +36,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   animate_gradient: ^0.0.3
-  flutter_glow: ^0.3.2
+  # flutter_glow: ^0.3.2
   google_fonts: ^6.2.1
   firebase_core: ^3.6.0
   get: ^4.6.6
@@ -46,6 +46,10 @@ dependencies:
   syncfusion_flutter_gauges: ^27.1.53
   geekyants_flutter_gauges: ^1.0.4
   cloud_firestore: ^5.4.4
+  internet_connection_checker: ^1.0.0+1
+  animated_text_kit: ^4.2.2
+  palette_generator: ^0.3.3+4
+  http: ^1.2.2
 
 dev_dependencies:
   flutter_test:

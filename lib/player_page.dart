@@ -1,9 +1,8 @@
-import 'dart:developer';
 import 'dart:ui';
 import 'package:animate_gradient/animate_gradient.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_glow/flutter_glow.dart';
-import 'package:flutter_vector_icons/flutter_vector_icons.dart';
+// import 'package:flutter_glow/flutter_glow.dart';
+// import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:get/get.dart';
 import 'package:music_app/controller/song_controller.dart';
 import 'package:music_app/services/services.dart';
@@ -128,14 +127,14 @@ class _PlayerPageState extends State<PlayerPage> {
                     hoverElevation: 0,
                     focusElevation: 0,
                     highlightElevation: 0,
-                    child: const GlowIcon(
-                      Ionicons.md_play_skip_back_outline,
-                      color: Colors.white,
-                      size: 22,
-                    ),
+                    // child: const GlowIcon(
+                    //   Ionicons.md_play_skip_back_outline,
+                    //   color: Colors.white,
+                    //   size: 22,
+                    // ),
                     onPressed: () {}),
                 Obx(
-                  ()=> FloatingActionButton.large(
+                  ()=> FloatingActionButton.large( 
                     heroTag: 'btn-play',
                     shape: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(15),
@@ -147,18 +146,15 @@ class _PlayerPageState extends State<PlayerPage> {
                     hoverElevation: 0,
                     focusElevation: 0,
                     highlightElevation: 0,
-                    child: GlowIcon(
-                      controller.isPlaying.value ? Feather.pause : Feather.play,
-                      color: Colors.white,
-                      size: 22,
-                    ),
+                    // child: GlowIcon(
+                    //   controller.isPlaying.value ? Feather.pause : Feather.play,
+                    //   color: Colors.white,
+                    //   size: 22,
+                    // ),
                     onPressed: () async {
                       controller.isPlaying.value
-                          ? controller.stopPlaying()
-                          :(){controller.player.resume();
-                           controller.isPlaying.value = true;
-                          } ;
-                          // : controller.stopPlaying();
+                          ? controller.pausePlaying() 
+                          :controller.resumePlaying();
                     },
                   ),
                 ),
@@ -175,11 +171,11 @@ class _PlayerPageState extends State<PlayerPage> {
                   hoverElevation: 0,
                   focusElevation: 0,
                   highlightElevation: 0,
-                  child:  const GlowIcon(
-                    Ionicons.md_play_skip_forward_outline,
-                    color: Colors.white,
-                    size: 22,
-                  ),
+                  // child:  const GlowIcon(
+                  //   Ionicons.md_play_skip_forward_outline,
+                  //   color: Colors.white,
+                  //   size: 22,
+                  // ),
                   onPressed: () async {
                     if(services.quickpicks.length > controller.currentIndex.value+1){
                     controller.startPlaying(services.quickpicks[controller.currentIndex.value+1]);

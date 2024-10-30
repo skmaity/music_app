@@ -20,10 +20,10 @@ class SongController extends GetxController {
     player.setReleaseMode(ReleaseMode.stop);
 
     // Start the player as soon as the app is displayed.
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await player.setSource(UrlSource('https://www2.cs.uic.edu/~i101/SoundFiles/BabyElephantWalk60.wav'));
-      // await player.resume();
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) async {
+    //   await player.setSource(UrlSource('https://www2.cs.uic.edu/~i101/SoundFiles/BabyElephantWalk60.wav'));
+    //   // await player.resume();
+    // });
   }
 
     // Create the audio player.
@@ -36,9 +36,19 @@ class SongController extends GetxController {
     await player.play(UrlSource(song.song));
 
   }
-  stopPlaying()async{
-    isPlaying.value = false;
+  resumePlaying(){
+    player.resume();
+    isPlaying.value = true;
+  }
+  pausePlaying()async{
     await player.pause();
+    isPlaying.value = false;
+
+  }
+  disposePlayer  () async {
+    await player.stop();
+
+//  await player.dispose();
 
   }
 

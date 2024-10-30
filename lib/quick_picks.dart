@@ -1,7 +1,10 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_glow/flutter_glow.dart';
+// import 'package:flutter_glow/flutter_glow.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:music_app/controller/song_controller.dart';
 import 'package:music_app/player_page.dart';
 import 'package:music_app/services/services.dart';
@@ -10,7 +13,7 @@ class QuickPicks extends StatefulWidget {
   const QuickPicks({super.key});
 
   @override
-  State<QuickPicks> createState() => _QuickPicksState();
+  State<QuickPicks> createState() => _QuickPicksState(); 
 }
 
 class _QuickPicksState extends State<QuickPicks> {
@@ -20,9 +23,22 @@ class _QuickPicksState extends State<QuickPicks> {
   void initState() {
     controller = Get.put(SongController());
     services = Get.put(FireStoreServices());
-
+checkInternet();
     super.initState();
+
   }
+  checkInternet()async{
+        bool result = await InternetConnectionChecker().hasConnection;
+if(result == true) {
+  log('YAY! Free cute dog pics!');
+} else {
+  log('No internet :( Reason:');
+  print("shubha"+ "${InternetConnectionChecker().connectionStatus}");
+}
+  }
+
+  TextStyle style = GoogleFonts.pacifico().copyWith(
+                        fontSize: 45, color: Colors.white);
 
   @override
   Widget build(BuildContext context) {
@@ -44,8 +60,7 @@ class _QuickPicksState extends State<QuickPicks> {
                                      const EdgeInsets.only(right: 10, top: 40),
                                 child: Text(
                                   'Quick picks',
-                                  style: GoogleFonts.pacifico().copyWith(
-                                      fontSize: 45, color: Colors.white),
+                                  style: style,
                                 ),
                               ),
                                const SizedBox(
@@ -79,8 +94,7 @@ class _QuickPicksState extends State<QuickPicks> {
                   padding: const EdgeInsets.only(right: 10, top: 40),
                   child: Text(
                     'Quick picks',
-                    style: GoogleFonts.pacifico().copyWith(
-                        fontSize: 45, color: Colors.white),
+                    style: style,
                   ),
                 ),
                 const SizedBox(
@@ -143,18 +157,18 @@ class _QuickPicksState extends State<QuickPicks> {
                 ),
                 maxLines: 1,
               ),
-              trailing: IconButton(
-                onPressed: () {
-                  // Additional functionality for trailing icon if needed
-                },
-                icon: const SizedBox(
-                  width: 20,
-                  child: GlowIcon(
-                    Icons.play_arrow_rounded,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+              // trailing: IconButton(
+              //   onPressed: () {
+              //     // Additional functionality for trailing icon if needed
+              //   },
+              //   icon: const SizedBox(
+              //     width: 20,
+              //     child: GlowIcon(
+              //       Icons.play_arrow_rounded,
+              //       color: Colors.white,
+              //     ),
+              //   ),
+              // ),
             ),
           ),
         );
