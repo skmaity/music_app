@@ -23,19 +23,11 @@ class _QuickPicksState extends State<QuickPicks> {
   void initState() {
     controller = Get.put(SongController());
     services = Get.put(FireStoreServices());
-checkInternet();
+
     super.initState();
 
   }
-  checkInternet()async{
-        bool result = await InternetConnectionChecker().hasConnection;
-if(result == true) {
-  log('YAY! Free cute dog pics!');
-} else {
-  log('No internet :( Reason:');
-  print("shubha"+ "${InternetConnectionChecker().connectionStatus}");
-}
-  }
+
 
   TextStyle style = GoogleFonts.pacifico().copyWith(
                         fontSize: 45, color: Colors.white);
