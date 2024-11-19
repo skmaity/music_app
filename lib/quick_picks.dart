@@ -1,10 +1,6 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
-// import 'package:flutter_glow/flutter_glow.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:music_app/controller/song_controller.dart';
 import 'package:music_app/player_page.dart';
 import 'package:music_app/services/services.dart';

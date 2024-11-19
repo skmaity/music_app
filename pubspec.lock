@@ -248,14 +248,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  geekyants_flutter_gauges:
-    dependency: "direct main"
-    description:
-      name: geekyants_flutter_gauges
-      sha256: "75de8caf0b067931b8da09548cef858c750c59f8390de4411d329eba257ba9c3"
-      url: "https://pub.dev"
-    source: hosted
-    version: "1.0.4"
   get:
     dependency: "direct main"
     description:
@@ -296,14 +288,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.0+1"
-  intl:
-    dependency: transitive
-    description:
-      name: intl
-      sha256: d6f56758b7d3014a48af9701c085700aac781a92a87a62b1333b46d8879661cf
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.19.0"
   leak_tracker:
     dependency: transitive
     description:
@@ -485,22 +469,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.2.0"
-  syncfusion_flutter_core:
-    dependency: transitive
-    description:
-      name: syncfusion_flutter_core
-      sha256: "6a2445aef2adc77136aedaf8b0c1b7f22c43b43d7036f219414db9acd679570a"
-      url: "https://pub.dev"
-    source: hosted
-    version: "27.1.57"
-  syncfusion_flutter_gauges:
-    dependency: "direct main"
-    description:
-      name: syncfusion_flutter_gauges
-      sha256: "388e477decf9a2fa6dc7d254b38e908f19ae31763566c00ec7ef0eeb7efc464d"
-      url: "https://pub.dev"
-    source: hosted
-    version: "27.1.57"
   synchronized:
     dependency: transitive
     description:

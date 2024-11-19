@@ -12,13 +12,19 @@ class BackgroundController extends GetxController {
 
   @override
   void onInit() {
-    controller = Get.put(SongController());
-    updatePaletteGenerator();
+    controller = Get.put(SongController()); 
     super.onInit();
   }
 
-  RxList<Color> primaryColorsList = RxList.empty();
-  RxList<Color> secondaryColorsList = RxList.empty();
+  RxList<Color> primaryColorsList = [
+    Colors.black,
+    Colors.black38,
+
+  ].obs;
+  RxList<Color> secondaryColorsList = [
+        Colors.black38,
+    Colors.black,
+  ].obs;
 
   Future<List<double>> getImageSize(String imageUrl) async {
     List<double> heightAndWidth = [];
@@ -43,14 +49,14 @@ class BackgroundController extends GetxController {
 
   Future<void> updatePaletteGenerator() async {
     try {
-   
+   if(controller.currentPlaying.cover != "cover"){
 // Get the image size from the URL
         List<double> dimensions =
-            await getImageSize(controller.currentPlaying.cover == "cover" ? altImage :controller.currentPlaying.cover);
+            await getImageSize(controller.currentPlaying.cover);
 
         // Use the dimensions to set the size in PaletteGenerator
         paletteGenerator = await PaletteGenerator.fromImageProvider(
-          NetworkImage(controller.currentPlaying.cover == "cover" ? altImage :controller.currentPlaying.cover),
+          NetworkImage(controller.currentPlaying.cover),
           size: Size(dimensions[0], dimensions[1]),
           maximumColorCount: 20,
         );
@@ -60,7 +66,7 @@ class BackgroundController extends GetxController {
 log('called colorsbackground');
 
         primaryColorsList
-            .add(paletteGenerator!.dominantColor?.color ?? Colors.white);
+.add(paletteGenerator!.dominantColor?.color ?? Colors.white);
         primaryColorsList
             .add(paletteGenerator!.darkMutedColor?.color ?? Colors.white);
 
@@ -68,6 +74,13 @@ log('called colorsbackground');
             .add(paletteGenerator!.dominantColor?.color ?? Colors.white);
         secondaryColorsList
             .add(paletteGenerator!.mutedColor?.color ?? Colors.white);
+   }
+   else{
+    controller.currentPlaying.cover = altImage;
+    updatePaletteGenerator();
+
+   }
+
       
     } catch (e) {
       // Handle any errors that occur during the process

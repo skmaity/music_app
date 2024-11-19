@@ -43,8 +43,8 @@ dependencies:
   audioplayers: ^6.1.0
   flutter_vector_icons: ^2.0.0
   url_launcher: ^6.3.1
-  syncfusion_flutter_gauges: ^27.1.53
-  geekyants_flutter_gauges: ^1.0.4
+  # syncfusion_flutter_gauges: ^27.1.53
+  # geekyants_flutter_gauges: ^1.0.4
   cloud_firestore: ^5.4.4
   internet_connection_checker: ^1.0.0+1
   animated_text_kit: ^4.2.2

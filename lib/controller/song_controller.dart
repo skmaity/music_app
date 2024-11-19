@@ -1,55 +1,68 @@
 import 'package:audioplayers/audioplayers.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:music_app/model/song_model.dart';
 
 class SongController extends GetxController {
-
-   late AudioPlayer player = AudioPlayer();
-   RxBool isPlaying = false.obs;
+  late AudioPlayer player = AudioPlayer();
+  RxBool isPlaying = false.obs;
 
   MySongs currentPlaying = MySongs(artist: 'artist', cover: 'cover', song: 'song', title: 'title');
   RxInt currentIndex = 0.obs;
 
- @override
+  // New variables for tracking song position and duration
+  Rx<Duration> currentPosition = Duration.zero.obs;
+  Rx<Duration> totalDuration = Duration.zero.obs;
+
+  // Initialize the audio player
+  @override
   void onInit() {
     super.onInit();
-     player = AudioPlayer();
 
-    // Set the release mode to keep the source after playback has completed.
-    player.setReleaseMode(ReleaseMode.stop);
+    // Listen to position changes
+    player.onPositionChanged.listen((position) {
+      currentPosition.value = position;
+    });
 
-    // Start the player as soon as the app is displayed.
-    // WidgetsBinding.instance.addPostFrameCallback((_) async {
-    //   await player.setSource(UrlSource('https://www2.cs.uic.edu/~i101/SoundFiles/BabyElephantWalk60.wav'));
-    //   // await player.resume();
-    // });
+    // Listen to duration changes
+    player.onDurationChanged.listen((duration) {
+      totalDuration.value = duration;
+    });
+
+    // Listen to when the player finishes playing
+    player.onPlayerComplete.listen((event) {
+      isPlaying.value = false;
+      currentPosition.value = Duration.zero;
+    });
   }
 
-    // Create the audio player.
-  
-  startPlaying(MySongs song)async{
+  // Start playing a song
+  startPlaying(MySongs song) async {
     currentPlaying = song;
-
     isPlaying.value = true;
 
     await player.play(UrlSource(song.song));
-
   }
-  resumePlaying(){
+
+  // Resume playing the current song
+  resumePlaying() {
     player.resume();
     isPlaying.value = true;
   }
-  pausePlaying()async{
+
+  // Pause the current song
+  pausePlaying() async {
     await player.pause();
     isPlaying.value = false;
-
   }
-  disposePlayer  () async {
+
+  // Stop and dispose the player
+  disposePlayer() async {
     await player.stop();
-
-//  await player.dispose();
-
+    await player.dispose();
   }
 
+  // Seek to a specific position in the song
+  seekTo(Duration position) async {
+    await player.seek(position);
+  }
 }

@@ -10,8 +10,8 @@ plugins {
 
 android {
     namespace = "com.shubha.music"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    compileSdk = 34
+    ndkVersion = 34
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
