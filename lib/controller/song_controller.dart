@@ -1,6 +1,7 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:get/get.dart';
 import 'package:music_app/model/song_model.dart';
+import 'package:music_app/services/services.dart';
 
 class SongController extends GetxController {
   late AudioPlayer player = AudioPlayer();
@@ -32,8 +33,12 @@ class SongController extends GetxController {
     player.onPlayerComplete.listen((event) {
       isPlaying.value = false;
       currentPosition.value = Duration.zero;
+      playNextSong();
     });
   }
+  final FireStoreServices services = Get.put(FireStoreServices());
+
+
 
   // Start playing a song
   startPlaying(MySongs song) async {
@@ -42,6 +47,18 @@ class SongController extends GetxController {
 
     await player.play(UrlSource(song.song));
   }
+
+  void playNextSong() {
+  if (services.quickpicks.length > currentIndex.value + 1) {
+    // Play the next song
+    currentIndex.value = currentIndex.value + 1;
+    startPlaying(services.quickpicks[currentIndex.value]);
+  } else {
+    // If it's the last song, go back to the first song
+    currentIndex.value = 0;
+    startPlaying(services.quickpicks[0]);
+  }
+}
 
   // Resume playing the current song
   resumePlaying() {

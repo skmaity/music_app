@@ -1,14 +1,15 @@
 import 'dart:ui';
+import 'package:animate_gradient/animate_gradient.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:music_app/Albums.dart';
-import 'package:music_app/Artists.dart';
+import 'package:music_app/main_nav_pages/Albums.dart';
+import 'package:music_app/main_nav_pages/artists.dart';
 import 'package:music_app/controller/background_controller.dart';
 import 'package:music_app/controller/internet_controller.dart';
 import 'package:music_app/nointernet_page.dart';
-import 'package:music_app/playlists.dart';
-import 'package:music_app/quick_picks.dart';
-import 'package:music_app/songs.dart';
+import 'package:music_app/main_nav_pages/playlists.dart';
+import 'package:music_app/main_nav_pages/quick_picks.dart';
+import 'package:music_app/main_nav_pages/songs.dart';
 
 class Dashboard extends StatefulWidget  {
   const Dashboard({super.key});
@@ -45,6 +46,8 @@ class _DashboardState extends State<Dashboard> {
     pageIndex.value = 0;
     super.initState();
   }
+final BackgroundController _backgroundController = Get.put(BackgroundController());
+
 
 
 
@@ -57,6 +60,10 @@ class _DashboardState extends State<Dashboard> {
         alignment: Alignment.center,
         children:[
               // const AnimatedBackground(),
+               AnimateGradient(
+          primaryColors:_backgroundController.primaryColorsList,
+          secondaryColors: _backgroundController.secondaryColorsList,
+        ),
           
         
       
@@ -191,32 +198,32 @@ class _DashboardState extends State<Dashboard> {
         ),
       ),
     ),
-    RotatedBox(
-      quarterTurns: 3,
-      child: TextButton.icon(
-        iconAlignment: IconAlignment.end,
-        onPressed: () {
-          pageIndex.value = 4;
-        },
-        icon: Icon(
-          pageIndex.value == 4 ? Icons.album : Icons.album_outlined,
-          color: pageIndex.value == 4 ? Colors.white : Colors.black54,
-          shadows: pageIndex.value == 4
-              ? [const Shadow(blurRadius: 9.0, color: Colors.white, offset: Offset(0, 0))]
-              : null,
-          size: 20,
-        ),
-        label: Text(
-          'Albums',
-          style: TextStyle(
-            shadows: pageIndex.value == 4
-                ? [const Shadow(blurRadius: 9.0, color: Colors.white, offset: Offset(0, 0))]
-                : null,
-            color: pageIndex.value == 4 ? Colors.white : Colors.black54,
-          ),
-        ),
-      ),
-    ),
+    // RotatedBox(
+    //   quarterTurns: 3,
+    //   child: TextButton.icon(
+    //     iconAlignment: IconAlignment.end,
+    //     onPressed: () {
+    //       pageIndex.value = 4;
+    //     },
+    //     icon: Icon(
+    //       pageIndex.value == 4 ? Icons.album : Icons.album_outlined,
+    //       color: pageIndex.value == 4 ? Colors.white : Colors.black54,
+    //       shadows: pageIndex.value == 4
+    //           ? [const Shadow(blurRadius: 9.0, color: Colors.white, offset: Offset(0, 0))]
+    //           : null,
+    //       size: 20,
+    //     ),
+    //     label: Text(
+    //       'Albums',
+    //       style: TextStyle(
+    //         shadows: pageIndex.value == 4
+    //             ? [const Shadow(blurRadius: 9.0, color: Colors.white, offset: Offset(0, 0))]
+    //             : null,
+    //         color: pageIndex.value == 4 ? Colors.white : Colors.black54,
+    //       ),
+    //     ),
+    //   ),
+    // ),
   ],
 ),
                           ),

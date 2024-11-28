@@ -16,14 +16,10 @@ final BackgroundController _backgroundController = Get.put(BackgroundController(
   @override
   Widget build(BuildContext context) {
     return
-       Obx(
-         ()=> AnimateGradient(
-                    
-                    primaryColors: _backgroundController.primaryColorsList,
-                    secondaryColors:  _backgroundController.secondaryColorsList
-                  
-                  ),
-       );
-
+    AnimateGradient(
+          primaryColors:_backgroundController.primaryColorsList,
+          secondaryColors: _backgroundController.secondaryColorsList,
+        );
+      
   } 
 }

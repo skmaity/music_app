@@ -1,8 +1,9 @@
 import 'dart:ui';
+import 'package:animate_gradient/animate_gradient.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:get/get.dart';
-import 'package:music_app/component/animated_background.dart';
+// import 'package:music_app/component/animated_background.dart';
 import 'package:music_app/controller/background_controller.dart';
 import 'package:music_app/controller/song_controller.dart';
 import 'package:music_app/services/services.dart';
@@ -39,17 +40,7 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   // Method to play the next song
-void playNextSong() {
-  if (services.quickpicks.length > controller.currentIndex.value + 1) {
-    // Play the next song
-    controller.currentIndex.value = controller.currentIndex.value + 1;
-    controller.startPlaying(services.quickpicks[controller.currentIndex.value]);
-  } else {
-    // If it's the last song, go back to the first song
-    controller.currentIndex.value = 0;
-    controller.startPlaying(services.quickpicks[0]);
-  }
-}
+
 
 // Method to play the previous song
 void playPreviousSong() {
@@ -57,7 +48,7 @@ void playPreviousSong() {
     // Play the previous song
     controller.currentIndex.value = controller.currentIndex.value - 1;
     controller.startPlaying(services.quickpicks[controller.currentIndex.value]);
-  } else {
+  } else { 
     // If it's the first song, go to the last song
     controller.currentIndex.value = services.quickpicks.length - 1;
     controller.startPlaying(services.quickpicks[controller.currentIndex.value]);
@@ -75,7 +66,11 @@ void playPreviousSong() {
       extendBodyBehindAppBar: true,
       extendBody: true,
       body: Stack(alignment: Alignment.center, children: <Widget>[
-        const AnimatedBackground(),
+        // const AnimatedBackground(),
+            AnimateGradient(
+          primaryColors:_backgroundController.primaryColorsList,
+          secondaryColors: _backgroundController.secondaryColorsList,
+        ),
         Obx(
           () {
       final currentPositionText = formatDuration(controller.currentPosition.value);
@@ -111,30 +106,63 @@ void playPreviousSong() {
                           const SizedBox(
                             height: 20,
                           ),
+                          
+                          
+                          SliderTheme(
+                              data: SliderTheme.of(context).copyWith(
+    trackHeight: 1.5,
+    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8), // Thumb size
+    overlayShape: const RoundSliderOverlayShape(overlayRadius: 15), // Thumb hover size
+  ),
+  
+                            child: Slider(
+                            
+                              min: 0.0,
+                              max: controller.totalDuration.value.inSeconds.toDouble(),
+                              value: controller.currentPosition.value.inSeconds
+                                  .toDouble()
+                                  .clamp(0.0, controller.totalDuration.value.inSeconds.toDouble()),
+                              activeColor: Colors.white,
+                              allowedInteraction: SliderInteraction.slideOnly,
+                              onChanged: (value) {
+                                controller
+                                    .seekTo(Duration(seconds: value.toInt()));
+                              },
+                            ),
+                          ),
+                      
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const SizedBox(
-                                width: 10,
-                              ),
-                              Text(
-                                '$currentPositionText / $totalDurationText',
+                              Row(
+                                children: [
+                                  const SizedBox(
+                                    width: 10,
+                                  ),
+                                  Text(
+                                currentPositionText,
                                 style: const TextStyle(
                                     fontSize: 16, color: Colors.white),
                               ),
+                                ],
+                              ),
+                              
+                                                            Row(
+                                                              children: [
+                                                                Text(
+                                                                                                 totalDurationText,
+                                                                                                style: const TextStyle(
+                                                                                                    fontSize: 16, color: Colors.white),
+                                                                                              ),
+                                                                                              const SizedBox(
+                                width: 10,
+                              ),
+                                                              ],
+                                                            ),
+                              
+
+                              
                             ],
-                          ),
-                          Slider(
-                            min: 0.0,
-                            max: controller.totalDuration.value.inSeconds.toDouble(),
-                            value: controller.currentPosition.value.inSeconds
-                                .toDouble()
-                                .clamp(0.0, controller.totalDuration.value.inSeconds.toDouble()),
-                            activeColor: Colors.white,
-                            allowedInteraction: SliderInteraction.slideOnly,
-                            onChanged: (value) {
-                              controller
-                                  .seekTo(Duration(seconds: value.toInt()));
-                            },
                           ),
                         ],
                       ),
@@ -160,6 +188,7 @@ void playPreviousSong() {
                       hoverElevation: 0,
                       focusElevation: 0,
                       highlightElevation: 0,
+                      onPressed: playPreviousSong,
                       child: const Icon(
                         shadows: [
                           Shadow(
@@ -172,7 +201,6 @@ void playPreviousSong() {
                         color: Colors.white,
                         size: 22,
                       ),
-                      onPressed: playPreviousSong,
                       ),
                   FloatingActionButton.large(
                     heroTag: 'btn-play',
@@ -216,6 +244,7 @@ void playPreviousSong() {
                     hoverElevation: 0,
                     focusElevation: 0,
                     highlightElevation: 0,
+                    onPressed: controller.playNextSong,
                     child: const Icon(
                       shadows: [
                         Shadow(
@@ -227,8 +256,7 @@ void playPreviousSong() {
                       Ionicons.md_play_skip_forward_outline,
                       color: Colors.white,
                       size: 22,
-                    ),
-                    onPressed: playNextSong
+                    )
                   ),
                 ],
               )
