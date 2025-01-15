@@ -14,7 +14,7 @@ class SongController extends GetxController {
   Rx<Duration> currentPosition = Duration.zero.obs;
   Rx<Duration> totalDuration = Duration.zero.obs;
 
-  // Initialize the audio player
+  // Initialize the audio player 
   @override
   void onInit() {
     super.onInit();
@@ -82,4 +82,9 @@ class SongController extends GetxController {
   seekTo(Duration position) async {
     await player.seek(position);
   }
+  double getProgress() {
+  if (totalDuration.value.inMilliseconds == 0) return 0.0;
+  return currentPosition.value.inMilliseconds / totalDuration.value.inMilliseconds;
+}
+
 }

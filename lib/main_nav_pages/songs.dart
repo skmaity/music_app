@@ -10,11 +10,11 @@ class Songs extends StatefulWidget {
 class _SongsState extends State<Songs> {
   @override
   Widget build(BuildContext context) {
-    return   Scaffold(
+    return const Scaffold(
       backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.only(left: 10),
+          padding: EdgeInsets.only(left: 10), 
           child: Column(
             children: [
                 SizedBox(height: 10,),

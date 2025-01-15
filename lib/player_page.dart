@@ -3,9 +3,9 @@ import 'package:animate_gradient/animate_gradient.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:get/get.dart';
-// import 'package:music_app/component/animated_background.dart';
 import 'package:music_app/controller/background_controller.dart';
 import 'package:music_app/controller/song_controller.dart';
+import 'package:music_app/player_page_function.dart';
 import 'package:music_app/services/services.dart';
 
 class PlayerPage extends StatefulWidget {
@@ -39,27 +39,44 @@ class _PlayerPageState extends State<PlayerPage> {
     return '$minutes:$seconds';
   }
 
-  // Method to play the next song
-
-
-// Method to play the previous song
-void playPreviousSong() {
-  if (controller.currentIndex.value > 0) {
-    // Play the previous song
-    controller.currentIndex.value = controller.currentIndex.value - 1;
-    controller.startPlaying(services.quickpicks[controller.currentIndex.value]);
-  } else { 
-    // If it's the first song, go to the last song
-    controller.currentIndex.value = services.quickpicks.length - 1;
-    controller.startPlaying(services.quickpicks[controller.currentIndex.value]);
+    // Method to play the previous song
+  void playPreviousSong() {
+    if (controller.currentIndex.value > 0) {
+      // Play the previous song 
+      controller.currentIndex.value = controller.currentIndex.value - 1;
+      controller
+          .startPlaying(services.quickpicks[controller.currentIndex.value]);
+    } else {
+      // If it's the first song, go to the last song
+      controller.currentIndex.value = services.quickpicks.length - 1;
+      controller
+          .startPlaying(services.quickpicks[controller.currentIndex.value]);
+    }
   }
-}
 
+  final PlayerPageFunction _playerPageFunction = Get.put(PlayerPageFunction());
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            icon: const Hero(
+              tag: 'music',
+              child: Icon(
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                        blurRadius: 9.0,
+                        color: Colors.white70,
+                        offset: Offset(0, 0))
+                  ],
+                  Icons.music_note_outlined),
+            )),
+        automaticallyImplyLeading: false,
         iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: Colors.transparent,
       ),
@@ -67,15 +84,16 @@ void playPreviousSong() {
       extendBody: true,
       body: Stack(alignment: Alignment.center, children: <Widget>[
         // const AnimatedBackground(),
-            AnimateGradient(
-          primaryColors:_backgroundController.primaryColorsList,
+        AnimateGradient(
+          primaryColors: _backgroundController.primaryColorsList,
           secondaryColors: _backgroundController.secondaryColorsList,
         ),
-        Obx(
-          () {
-      final currentPositionText = formatDuration(controller.currentPosition.value);
-    final totalDurationText = formatDuration(controller.totalDuration.value);
-         return Column(
+        Obx(() {
+          final currentPositionText =
+              formatDuration(controller.currentPosition.value);
+          final totalDurationText =
+              formatDuration(controller.totalDuration.value);
+          return Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               ClipRRect(
@@ -83,7 +101,7 @@ void playPreviousSong() {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
                   child: Container(
-                    height: 450,
+                    height: 470,
                     width: MediaQuery.of(context).size.width - 50,
                     decoration: BoxDecoration(
                         color: Colors.grey.shade100.withOpacity(0.2)),
@@ -95,7 +113,7 @@ void playPreviousSong() {
                             height: 20,
                           ),
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(15),
+                            borderRadius: BorderRadius.circular(4),
                             child: Image(
                               height: 300,
                               fit: BoxFit.cover,
@@ -104,24 +122,113 @@ void playPreviousSong() {
                             ),
                           ),
                           const SizedBox(
+                            height: 5,
+                          ),
+                          Row(
+                            children: [
+                              const SizedBox(
+                                width: 5,
+                              ),
+                              Expanded(
+                                child: Text(
+                                  overflow: TextOverflow.ellipsis,
+                                  "${controller.currentPlaying.title} - ${controller.currentPlaying.artist}",
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                              ),
+                            
+                                FutureBuilder(
+                                  future: services.isSongInFavorites(controller.currentPlaying.song),
+                                  builder: (context,snapshot) {
+                                    if(snapshot.hasData){
+return IconButton(
+                                      icon: Icon( snapshot.data!
+                                            ? FontAwesome.heart
+                                            : FontAwesome.heart_o,
+                                        color: Colors.white,
+                                        shadows: [
+                                          Shadow(
+                                            blurRadius:
+                                                snapshot.data! ? 9.0 : 0,
+                                            color: Colors.white,
+                                            offset: const Offset(0, 0),
+                                          ),
+                                        ],
+                                      ),
+                                      onPressed: () async {
+                                        if (!snapshot.data!) {
+                                          await services
+                                              .addSongToFavorites(
+                                                  controller.currentPlaying)
+                                              .then(
+                                            (value) {
+                                              if (value) {
+                                                _playerPageFunction
+                                                    .songAddedToFaviorateAlert(
+                                                  Get.context,
+                                                  controller.currentPlaying.title,
+                                                );
+                                              }
+                                            },
+                                          );
+                                        } else {
+                                          await services
+                                              .removeSongFromFavorites(
+                                                  controller.currentPlaying)
+                                              .then(
+                                            (value) {
+                                              _playerPageFunction
+                                                  .songRemovedFromFaviorateAlert(
+                                                Get.context,
+                                                controller.currentPlaying.title,
+                                              );
+                                            },
+                                          );
+                                        }
+                                    
+                                      },
+                                    );
+                                    }else{
+                                      return const SizedBox(
+                                        height: 25,
+                                        width: 25,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 1,
+                                          color: Colors.white,
+                                          
+                                        ),
+                                      );
+                                    }
+                                    
+                                  }
+                                ),
+                            
+                            ],
+                          ),
+                          const SizedBox(
                             height: 20,
                           ),
-                          
-                          
                           SliderTheme(
-                              data: SliderTheme.of(context).copyWith(
-    trackHeight: 1.5,
-    thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8), // Thumb size
-    overlayShape: const RoundSliderOverlayShape(overlayRadius: 15), // Thumb hover size
-  ),
-  
+                            data: SliderTheme.of(context).copyWith(
+                              trackHeight: 1.5,
+                              thumbShape: const RoundSliderThumbShape(
+                                  enabledThumbRadius: 8), // Thumb size
+                              overlayShape: const RoundSliderOverlayShape(
+                                  overlayRadius: 15), // Thumb hover size
+                            ),
                             child: Slider(
-                            
                               min: 0.0,
-                              max: controller.totalDuration.value.inSeconds.toDouble(),
+                              max: controller.totalDuration.value.inSeconds
+                                  .toDouble(),
                               value: controller.currentPosition.value.inSeconds
                                   .toDouble()
-                                  .clamp(0.0, controller.totalDuration.value.inSeconds.toDouble()),
+                                  .clamp(
+                                      0.0,
+                                      controller.totalDuration.value.inSeconds
+                                          .toDouble()),
                               activeColor: Colors.white,
                               allowedInteraction: SliderInteraction.slideOnly,
                               onChanged: (value) {
@@ -130,7 +237,6 @@ void playPreviousSong() {
                               },
                             ),
                           ),
-                      
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -140,28 +246,24 @@ void playPreviousSong() {
                                     width: 10,
                                   ),
                                   Text(
-                                currentPositionText,
-                                style: const TextStyle(
-                                    fontSize: 16, color: Colors.white),
-                              ),
+                                    currentPositionText,
+                                    style: const TextStyle(
+                                        fontSize: 16, color: Colors.white),
+                                  ),
                                 ],
                               ),
-                              
-                                                            Row(
-                                                              children: [
-                                                                Text(
-                                                                                                 totalDurationText,
-                                                                                                style: const TextStyle(
-                                                                                                    fontSize: 16, color: Colors.white),
-                                                                                              ),
-                                                                                              const SizedBox(
-                                width: 10,
+                              Row(
+                                children: [
+                                  Text(
+                                    totalDurationText,
+                                    style: const TextStyle(
+                                        fontSize: 16, color: Colors.white),
+                                  ),
+                                  const SizedBox(
+                                    width: 10,
+                                  ),
+                                ],
                               ),
-                                                              ],
-                                                            ),
-                              
-
-                              
                             ],
                           ),
                         ],
@@ -177,31 +279,31 @@ void playPreviousSong() {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   FloatingActionButton.large(
-                      heroTag: 'btn-previous',
-                      shape: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(15),
-                          borderSide: BorderSide(
-                              color: Colors.grey.shade100.withOpacity(0.15))),
-                      backgroundColor: Colors.grey.shade100.withOpacity(0.1),
-                      elevation: 0,
-                      disabledElevation: 0,
-                      hoverElevation: 0,
-                      focusElevation: 0,
-                      highlightElevation: 0,
-                      onPressed: playPreviousSong,
-                      child: const Icon(
-                        shadows: [
-                          Shadow(
-                            blurRadius: 9.0,
-                            color: Colors.white,
-                            offset: Offset(0, 0),
-                          ),
-                        ],
-                        Ionicons.md_play_skip_back_outline,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                      ),
+                    heroTag: 'btn-previous',
+                    shape: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: BorderSide(
+                            color: Colors.grey.shade100.withOpacity(0.15))),
+                    backgroundColor: Colors.grey.shade100.withOpacity(0.1),
+                    elevation: 0,
+                    disabledElevation: 0,
+                    hoverElevation: 0,
+                    focusElevation: 0,
+                    highlightElevation: 0,
+                    onPressed: playPreviousSong,
+                    child: const Icon(
+                      shadows: [
+                        Shadow(
+                          blurRadius: 9.0,
+                          color: Colors.white,
+                          offset: Offset(0, 0),
+                        ),
+                      ],
+                      Ionicons.md_play_skip_back_outline,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
                   FloatingActionButton.large(
                     heroTag: 'btn-play',
                     shape: OutlineInputBorder(
@@ -230,39 +332,39 @@ void playPreviousSong() {
                       controller.isPlaying.value
                           ? controller.pausePlaying()
                           : controller.resumePlaying();
+                        
                     },
                   ),
                   FloatingActionButton.large(
-                    heroTag: 'btn-next',
-                    shape: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(15),
-                        borderSide: BorderSide(
-                            color: Colors.grey.shade100.withOpacity(0.15))),
-                    backgroundColor: Colors.grey.shade100.withOpacity(0.1),
-                    elevation: 0,
-                    disabledElevation: 0,
-                    hoverElevation: 0,
-                    focusElevation: 0,
-                    highlightElevation: 0,
-                    onPressed: controller.playNextSong,
-                    child: const Icon(
-                      shadows: [
-                        Shadow(
-                          blurRadius: 9.0,
-                          color: Colors.white,
-                          offset: Offset(0, 0),
-                        ),
-                      ],
-                      Ionicons.md_play_skip_forward_outline,
-                      color: Colors.white,
-                      size: 22,
-                    )
-                  ),
+                      heroTag: 'btn-next',
+                      shape: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(15),
+                          borderSide: BorderSide(
+                              color: Colors.grey.shade100.withOpacity(0.15))),
+                      backgroundColor: Colors.grey.shade100.withOpacity(0.1),
+                      elevation: 0,
+                      disabledElevation: 0,
+                      hoverElevation: 0,
+                      focusElevation: 0,
+                      highlightElevation: 0,
+                      onPressed: controller.playNextSong,
+                      child: const Icon(
+                        shadows: [
+                          Shadow(
+                            blurRadius: 9.0,
+                            color: Colors.white,
+                            offset: Offset(0, 0),
+                          ),
+                        ],
+                        Ionicons.md_play_skip_forward_outline,
+                        color: Colors.white,
+                        size: 22,
+                      )),
                 ],
-              )
+              ),
             ],
-          );}
-        ),
+          );
+        }),
       ]),
     );
   }

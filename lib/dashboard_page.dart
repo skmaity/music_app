@@ -1,15 +1,18 @@
 import 'dart:ui';
 import 'package:animate_gradient/animate_gradient.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
+import 'package:music_app/controller/song_controller.dart';
 import 'package:music_app/main_nav_pages/Albums.dart';
-import 'package:music_app/main_nav_pages/artists.dart';
+import 'package:music_app/main_nav_pages/artists_page.dart';
 import 'package:music_app/controller/background_controller.dart';
 import 'package:music_app/controller/internet_controller.dart';
 import 'package:music_app/nointernet_page.dart';
 import 'package:music_app/main_nav_pages/playlists.dart';
 import 'package:music_app/main_nav_pages/quick_picks.dart';
 import 'package:music_app/main_nav_pages/songs.dart';
+import 'package:music_app/player_page.dart';
 
 class Dashboard extends StatefulWidget  {
   const Dashboard({super.key});
@@ -19,17 +22,16 @@ class Dashboard extends StatefulWidget  {
 }
 
 class _DashboardState extends State<Dashboard> {
-  // bool isSelected = false;
   bool checkboxSelected = false;
   bool switchSelected = false;
   bool radioSelected = false;
   bool iconSelected = false;
 
   List<Widget> pages = [
-    const QuickPicks(),
+    const QuickPicks(), 
     const Songs(),
     const Playlists(),
-    const Artists(),
+    const ArtistsPage(),
     const Albums()
   ];
 
@@ -37,12 +39,15 @@ class _DashboardState extends State<Dashboard> {
 
   late final InternetController internetController ;
   late BackgroundController backgroundcontroller;
+  late SongController songcontroller;
 
   @override
   void initState() {
     backgroundcontroller = Get.put(BackgroundController());
     backgroundcontroller.updatePaletteGenerator();
    internetController = Get.put(InternetController());
+   songcontroller = Get.put(SongController());
+
     pageIndex.value = 0;
     super.initState();
   }
@@ -79,6 +84,55 @@ final BackgroundController _backgroundController = Get.put(BackgroundController(
                 () => Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+
+ 
+songcontroller.isPlaying.value ? InkWell(
+  onTap: (){
+    // Navigator.push(context,MaterialPageRoute(builder: (context) => const PlayerPage(),)  );
+    Get.to(()=>const PlayerPage());
+  },
+  child: Stack(
+    alignment: AlignmentDirectional.center,
+    children: [
+      Obx(()=>
+         SizedBox(
+          height: 45,
+          width: 45, 
+          child:  CircularProgressIndicator(
+            
+            strokeWidth: 1,
+            strokeCap: StrokeCap.round,
+            value: songcontroller.getProgress(),
+            color: Colors.white,
+          )
+        ),
+      ),
+     Container(
+      
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+                                  color: Colors.grey.shade100.withOpacity(0.4)),
+      child: 
+       const Padding(
+        padding:  EdgeInsets.all(8.0),
+        child: Hero(
+          tag: 'music',
+          child: Icon(Icons.music_note_outlined,
+          color: Colors.white,
+           shadows: 
+                   [Shadow(blurRadius: 9.0, color: Colors.white, offset: Offset(0, 0))]
+          ),
+        ),
+        
+      ),
+      ).animate().fade().scale(),
+    ]
+  ),
+):const SizedBox(),
+  
+
+const SizedBox(height: 10,),
+
                     ClipRRect(
                       borderRadius: const BorderRadius.only(
                           topRight: Radius.circular(30),
@@ -109,7 +163,7 @@ final BackgroundController _backgroundController = Get.put(BackgroundController(
               : null,
           size: 20,
         ),
-        label: Text(
+        label: Text( 
           'Quick picks',
           style: TextStyle(
             shadows: pageIndex.value == 0
@@ -246,8 +300,7 @@ final BackgroundController _backgroundController = Get.put(BackgroundController(
 
                         return SlideTransition(
                           position: slideAnimation,
-                          child:
-                              FadeTransition(opacity: animation, child: child),
+                          child: FadeTransition(opacity: animation, child: child),
                         );
                       },
                       child: internetController.internet.value
