@@ -1,4 +1,8 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:music_app/services/services.dart';
 
 class Songs extends StatefulWidget {
   const Songs({super.key});
@@ -8,18 +12,34 @@ class Songs extends StatefulWidget {
 }
 
 class _SongsState extends State<Songs> {
+
+  
+
+  TextEditingController songQuery = TextEditingController();
+
+  late FireStoreServices services;
+
+
+ @override
+  void initState() {
+  services = Get.put(FireStoreServices());
+    super.initState();
+  }
+
+List<Map<String, dynamic>> songs = [];
+
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.only(left: 10), 
+          padding:  EdgeInsets.only(left: 10), 
           child: Column(
             children: [
-                SizedBox(height: 10,),
+                const SizedBox(height: 10,),
           
-              Row(
+              const Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [Padding(
                   padding: EdgeInsets.only(right: 10,top: 40),
@@ -27,12 +47,23 @@ class _SongsState extends State<Songs> {
                 ),
                 SizedBox(width: 10,)
                 ],),
-          SizedBox(height: 10,),
+           SizedBox(height: 10,),
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 10),
+                  padding:  EdgeInsets.symmetric(horizontal: 10),
                   child: TextField(
-                    style: TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
+                    controller: songQuery,
+                    onChanged: (v) async{
+                    log("shubha songs");
+
+                    log(v);
+                   
+                   songs = await services.searchSongs(v);
+                    setState(() {
+                      
+                    });
+                    },
+                    style: const TextStyle(color: Colors.white),
+                    decoration: const InputDecoration(
                       alignLabelWithHint: true,
                     
                       // normal border
@@ -53,7 +84,8 @@ class _SongsState extends State<Songs> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(10)))
                     ),
                   ),
-                )
+                ),
+                Text(songs.isNotEmpty? songs[0]['title'] : "No Data" ,style: TextStyle(color: Colors.white),)
               
             ],
           ),

@@ -12,11 +12,14 @@ class FireStoreServices extends GetxController {
   RxList<MySongs> quickpicks = <MySongs>[].obs;
   RxList<MySongs> favorite = <MySongs>[].obs;
   RxList playlists = [].obs;
+  RxList playlistsIds = [].obs;
+
 
 
   RxList<Artist> artistsList = <Artist>[].obs;
   RxList<String> artistsDocIdList = <String>[].obs;
   RxList<MySongs> artistsongs = <MySongs>[].obs;
+  
 
   final db = FirebaseFirestore.instance;
 
@@ -152,7 +155,34 @@ Future<bool> removeSongFromFavorites(MySongs song) async {
 }
 
 
+Future<List<Map<String, dynamic>>> searchSongs(String searchQuery) async {
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
+  try {
+    // Query the `songs` collection
+    QuerySnapshot querySnapshot = await firestore
+        .collection('songs')
+        .where('title', isGreaterThanOrEqualTo: searchQuery)
+        .where('title', isLessThanOrEqualTo: searchQuery + '\uf8ff')
+        .get();
+
+    // Convert query results to a list of maps
+    List<Map<String, dynamic>> songs = querySnapshot.docs.map((doc) {
+      return {
+        'songid': doc['songid'],
+        'title': doc['title'],
+        'artist': doc['artist'],
+        'song': doc['song'],
+        'cover': doc['cover'],
+      };
+    }).toList();
+
+    return songs;
+  } catch (e) {
+    print('Error searching songs: $e');
+    return [];
+  }
+}
 
     // Function to get a unique device ID
 
@@ -166,74 +196,82 @@ Future<String> getDeviceId() async {
   if (deviceId == null) {
     // Generate a new UUID
     const uuid = Uuid();
-    deviceId = uuid.v4(); // Generate a new unique ID
+    deviceId = uuid.v4();
     await prefs.setString(deviceKey, deviceId); // Store the ID locally
   }
 
   return deviceId;
 }
-  void getPlaylists() async {
-  try {
-    playlists.clear(); // Clear the local list before fetching data
-    final String deviceId = await getDeviceId();
 
-    // Reference to the "songs" subcollection under the device's document
-    final playListCollection = await db
-        .collection('user_playlists')
-        .doc('SKQ1.211019.001')
-        .collection('playlists')
-        .get();
+// void getPlaylists() async {
+//   try {
+//     playlists.clear(); // Clear the local list before fetching data
+//     String deviceId = await getDeviceId();
 
-    // Iterate over each song document and convert it into a MySongs object
-    for (var doc in playListCollection.docs) {
-      playlists.add(doc.data());
+//     // Reference to the "playlists" subcollection
+//     final playListCollection = await db
+//         .collection('userplaylists')
+//         // .doc(deviceId)
+//         // .collection('playlists')
+//         .get();
 
-      print(doc.id + " shubha playlist id");
-    }
-    
+//     // Check if the collection is empty
+//     if (playListCollection.docs.isEmpty) {
+//       print("No playlists found for the device.");
+//       return;
+//     }
 
-    print("Fetched ${playlists.length} playlist songs.");
-  } catch (e) {
-    print("Error fetching playlist songs: $e");
-  }
-}
+//     // Iterate over each document in the "playlists" collection
+//     for (var doc in playListCollection.docs) {
+//       // Optional: Print document ID for debugging
+//       print("Playlist ID: ${doc.id}");
 
+//     playlistsIds.add(doc.id);
+//       // Add the document data to the local playlists list
+//       playlists.add(doc.data()
+//       );
+//     }
 
-Future<bool> addNewPlayList(String playListName) async {
-  try {
-    final String deviceId = await getDeviceId();
-
-    // Reference to the "favorites" collection and document for the device
-    final deviceDoc = db.collection('user_playlists').doc(deviceId);
-
-    // Add the song details along with the timestamp
-    // await deviceDoc.collection('playlists').add({
-    //   ...song.toJson(),
-    //   'addedAt': FieldValue.serverTimestamp(), // Add Firestore server timestamp
-    // });
-
-  await  deviceDoc
-  .collection("playlists")
-  .doc(playListName)
-  .collection("songs")
-  .doc("song_003")
-  .set({
-    'title': "Levitating",
-    'artist': "Dua Lipa",
-    'album': "Future Nostalgia",
-    'duration': 203,
-    'url': "https://...",
-    'addedAt': DateTime.now(),
-  });
+//     print("Fetched ${playlists.length} playlists.");
+//   } catch (e) {
+//     print("Error fetching playlist songs: $e");
+//   }
+// }
 
 
-    print("Song added successfully!");
-    return true;
-  } catch (e) {
-    print("Error adding song: $e");
-    return false;
-  }
-}
+// Future<bool> addNewPlayList(String playListName) async {
+//   try {
+//     final String deviceId = await getDeviceId();
+
+//     // Reference to the "favorites" collection and document for the device
+//     final deviceDoc = db.collection('userplaylists').doc(deviceId);
+
+//     // Add the song details along with the timestamp
+//     // await deviceDoc.collection('playlists').add({
+//     //   ...song.toJson(),
+//     //   'addedAt': FieldValue.serverTimestamp(), // Add Firestore server timestamp
+//     // });
+
+//   await  deviceDoc
+//   .collection(playListName)
+//   .doc("song_003")
+//   .set({
+//     'title': "Levitating",
+//     'artist': "Dua Lipa",
+//     'album': "Future Nostalgia",
+//     'duration': 203,
+//     'url': "https://...",
+//     'addedAt': DateTime.now(),
+//   });
+
+
+//     print("Song added successfully!");
+//     return true;
+//   } catch (e) {
+//     print("Error adding song: $e");
+//     return false;
+//   }
+// }
 }
 
 

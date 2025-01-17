@@ -20,12 +20,11 @@ class _PlaylistsState extends State<Playlists> {
 
   @override
   Widget build(BuildContext context) {
-    return Obx(
-      ()=> Scaffold(
+    return const Scaffold(
         backgroundColor: Colors.transparent,
-        body: pageController.goInsidePlayList.value ? const InsidePlayList() :const PlayListWidgets(),
-      ),
-    );
+        // body: pageController.goInsidePlayList.value ? const InsidePlayList() :const PlayListWidgets(),
+        body: InsidePlayList(),
+      );
   }
 }
 
@@ -64,23 +63,23 @@ class _InsidePlayListState extends State<InsidePlayList> {
                             height: 10,
                           ),
                           Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment: MainAxisAlignment.end,
                             children: [
-                           Padding(
-                             padding:
-                                     const EdgeInsets.only(right: 10, top: 40),
-                             child: IconButton(
+                          //  Padding(
+                          //    padding:
+                          //            const EdgeInsets.only(right: 10, top: 40),
+                          //    child: IconButton(
                                                      
-                                                     onPressed: (){
-                             pageController.goInsidePlayList.value = ! pageController.goInsidePlayList.value;
-                                                     },
-                                                    icon: const Icon(
-                                                     color: Colors.white,
-                                                     shadows: [
-                                                       Shadow(blurRadius: 9.0, color: Colors.white70, offset: Offset(0, 0))
-                                                     ],
-                                                     Icons.arrow_back_ios_rounded)),
-                           ),
+                          //                            onPressed: (){
+                          //    pageController.goInsidePlayList.value = ! pageController.goInsidePlayList.value;
+                          //                            },
+                          //                           icon: const Icon(
+                          //                            color: Colors.white,
+                          //                            shadows: [
+                          //                              Shadow(blurRadius: 9.0, color: Colors.white70, offset: Offset(0, 0))
+                          //                            ],
+                          //                            Icons.arrow_back_ios_rounded)),
+                          //  ),
 
                               Row(
                                 children: [
@@ -88,7 +87,7 @@ class _InsidePlayListState extends State<InsidePlayList> {
                                     padding:
                                          const EdgeInsets.only(right: 20, top: 40,),
                                     child: Text(
-                                      'favorite',
+                                      'favorites',
                                       style: style,
                                     ),
                                   ),
@@ -195,147 +194,147 @@ class _InsidePlayListState extends State<InsidePlayList> {
 
 
 
-class PlayListWidgets extends StatefulWidget {
-  const PlayListWidgets({super.key});
+// class PlayListWidgets extends StatefulWidget {
+//   const PlayListWidgets({super.key});
 
-  @override
-  State<PlayListWidgets> createState() => _PlayListWidgetsState();
-}
+//   @override
+//   State<PlayListWidgets> createState() => _PlayListWidgetsState();
+// }
 
-class _PlayListWidgetsState extends State<PlayListWidgets> {
+// class _PlayListWidgetsState extends State<PlayListWidgets> {
 
-    late FireStoreServices services;
+//     late FireStoreServices services;
 
-  PageControllerNavPages pageController = Get.put(PageControllerNavPages());
+//   PageControllerNavPages pageController = Get.put(PageControllerNavPages());
 
-  @override
-  void initState() {
-      services = Get.put(FireStoreServices());
-    services.getPlaylists();
+//   @override
+//   void initState() {
+//       services = Get.put(FireStoreServices());
+//     // services.getPlaylists();
 
-    super.initState();
-  }
-  final PlaylistPageFunction _playlistPageFunction = Get.put(PlaylistPageFunction());
+//     super.initState();
+//   }
+//   final PlaylistPageFunction _playlistPageFunction = Get.put(PlaylistPageFunction());
 
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-        child: Column(
-          children: [
-              const SizedBox(height: 10,),
+//   @override
+//   Widget build(BuildContext context) {
+//     return SingleChildScrollView(
+//         child: Column(
+//           children: [
+//               const SizedBox(height: 10,),
         
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [Padding(
-                padding: EdgeInsets.only(right: 10,top: 40),
-                child: Text('Playlists',style: TextStyle(fontSize: 45,color: Colors.white),),
-              ),
-              SizedBox(width: 10,)
-              ],),
+//             const Row(
+//               mainAxisAlignment: MainAxisAlignment.end,
+//               children: [Padding(
+//                 padding: EdgeInsets.only(right: 10,top: 40),
+//                 child: Text('Playlists',style: TextStyle(fontSize: 45,color: Colors.white),),
+//               ),
+//               SizedBox(width: 10,)
+//               ],),
 
-              SizedBox(
-                height: MediaQuery.of(context).size.height,
-                child: GridView.builder(
-                  itemCount: 2,
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
-                  itemBuilder: (context, index) {
-                    if(index == 0){
-return Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
-                        onTap: (){
-pageController.goInsidePlayList.value = !pageController.goInsidePlayList.value;
-                        },
-                        child: Container(
+//               SizedBox(
+//                 height: MediaQuery.of(context).size.height,
+//                 child: GridView.builder(
+//                   itemCount: 2,
+//                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2),
+//                   itemBuilder: (context, index) {
+//                     if(index == 0){
+// return Padding(
+//                       padding: const EdgeInsets.all(8.0),
+//                       child: InkWell(
+//                         borderRadius: BorderRadius.circular(20),
+//                         onTap: (){
+// pageController.goInsidePlayList.value = !pageController.goInsidePlayList.value;
+//                         },
+//                         child: Container(
                                           
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              width: 0.5,
-                             color: Colors.grey.shade100.withOpacity(0.4)
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                           color: Colors.grey.shade100.withOpacity(0.2)
-                          ),
-                          child: const Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(FontAwesome.heart,color: Colors.red,),
-                              SizedBox(height: 20,),
-                              Text('My Faviorate',style: TextStyle(color: Colors.white),)
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                    }
-                    else if (index == 2-1){
-                      return Padding(
-                      padding:  const EdgeInsets.all(8.0),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
-                        onTap: (){
-                          _playlistPageFunction.addNewPlayList(context);
-                        },
-                        child: Container(
+//                           decoration: BoxDecoration(
+//                             border: Border.all(
+//                               width: 0.5,
+//                              color: Colors.grey.shade100.withOpacity(0.4)
+//                             ),
+//                             borderRadius: BorderRadius.circular(20),
+//                            color: Colors.grey.shade100.withOpacity(0.2)
+//                           ),
+//                           child: const Column(
+//                             mainAxisAlignment: MainAxisAlignment.center,
+//                             children: [
+//                               Icon(FontAwesome.heart,color: Colors.red,),
+//                               SizedBox(height: 20,),
+//                               Text('My Faviorate',style: TextStyle(color: Colors.white),)
+//                             ],
+//                           ),
+//                         ),
+//                       ),
+//                     );
+//                     }
+//                     else if (index == 2-1){
+//                       return Padding(
+//                       padding:  const EdgeInsets.all(8.0),
+//                       child: InkWell(
+//                         borderRadius: BorderRadius.circular(20),
+//                         onTap: (){
+//                           _playlistPageFunction.addNewPlayList(context);
+//                         },
+//                         child: Container(
                                           
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              width: 0.5,
-                             color: Colors.grey.shade100.withOpacity(0.4)
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                           color: Colors.grey.shade100.withOpacity(0.2)
-                          ),
-                          child: const Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.add,color: Colors.white,),
-                              SizedBox(height: 20,),
-                              Text('Add Playlist',style: TextStyle(color: Colors.white),)
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                    }
-                    else{
-                      return Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
-                        onTap: (){
+//                           decoration: BoxDecoration(
+//                             border: Border.all(
+//                               width: 0.5,
+//                              color: Colors.grey.shade100.withOpacity(0.4)
+//                             ),
+//                             borderRadius: BorderRadius.circular(20),
+//                            color: Colors.grey.shade100.withOpacity(0.2)
+//                           ),
+//                           child: const Column(
+//                             mainAxisAlignment: MainAxisAlignment.center,
+//                             children: [
+//                               Icon(Icons.add,color: Colors.white,),
+//                               SizedBox(height: 20,),
+//                               Text('Add Playlist',style: TextStyle(color: Colors.white),)
+//                             ],
+//                           ),
+//                         ),
+//                       ),
+//                     );
+//                     }
+//                     else{
+//                       return Padding(
+//                       padding: const EdgeInsets.all(8.0),
+//                       child: InkWell(
+//                         borderRadius: BorderRadius.circular(20),
+//                         onTap: (){
 
-                        },
-                        child: Container(          
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              width: 0.5,
-                             color: Colors.grey.shade100.withOpacity(0.4)
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                           color: Colors.grey.shade100.withOpacity(0.2)
-                          ),
-                          child: const Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(FontAwesome.heart,color: Colors.red,),
-                              SizedBox(height: 20,),
-                              Text('My Faviorate',style: TextStyle(color: Colors.white),)
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                    }
+//                         },
+//                         child: Container(          
+//                           decoration: BoxDecoration(
+//                             border: Border.all(
+//                               width: 0.5,
+//                              color: Colors.grey.shade100.withOpacity(0.4)
+//                             ),
+//                             borderRadius: BorderRadius.circular(20),
+//                            color: Colors.grey.shade100.withOpacity(0.2)
+//                           ),
+//                           child: const Column(
+//                             mainAxisAlignment: MainAxisAlignment.center,
+//                             children: [
+//                               Icon(FontAwesome.heart,color: Colors.red,),
+//                               SizedBox(height: 20,),
+//                               Text('My Faviorate',style: TextStyle(color: Colors.white),)
+//                             ],
+//                           ),
+//                         ),
+//                       ),
+//                     );
+//                     }
                     
                     
-                  },
-                ),
-              )
+//                   },
+//                 ),
+//               )
             
-          ],
-        ),
-      );
-  }
-}
+//           ],
+//         ),
+//       );
+//   }
+// }

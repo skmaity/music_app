@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:animate_gradient/animate_gradient.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:get/get.dart';
 import 'package:music_app/controller/song_controller.dart';
 import 'package:music_app/main_nav_pages/Albums.dart';
@@ -208,7 +209,7 @@ const SizedBox(height: 10,),
           pageIndex.value = 2;
         },
         icon: Icon(
-          pageIndex.value == 2 ? Icons.playlist_play_rounded : Icons.playlist_play_outlined,
+          pageIndex.value == 2 ? FontAwesome.heart : FontAwesome.heart_o,
           color: pageIndex.value == 2 ? Colors.white : Colors.black54,
           shadows: pageIndex.value == 2
               ? [const Shadow(blurRadius: 9.0, color: Colors.white, offset: Offset(0, 0))]
@@ -216,7 +217,7 @@ const SizedBox(height: 10,),
           size: 20,
         ),
         label: Text(
-          'Playlists',
+          'Favorites',
           style: TextStyle(
             shadows: pageIndex.value == 2
                 ? [const Shadow(blurRadius: 9.0, color: Colors.white, offset: Offset(0, 0))]

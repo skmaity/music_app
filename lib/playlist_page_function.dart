@@ -86,7 +86,7 @@ Future<void> addNewPlayList(BuildContext context) async {
                 // Logic to handle playlist creation
                 String playlistName = controller.text.trim();
                 if (playlistName.isNotEmpty) {
-              await services.addNewPlayList(playlistName);
+              // await services.addNewPlayList(playlistName);
                 }
                 Navigator.of(context).pop();
               },
