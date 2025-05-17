@@ -16,7 +16,7 @@ class Playlists extends StatefulWidget {
 
 class _PlaylistsState extends State<Playlists> {
 
-  PageControllerNavPages pageController = Get.put(PageControllerNavPages());
+  PageControllerNavPages pageController = Get.find<PageControllerNavPages>();
 
   @override
   Widget build(BuildContext context) {
@@ -39,12 +39,12 @@ class _InsidePlayListState extends State<InsidePlayList> {
 
   late FireStoreServices services;
 
-  PageControllerNavPages pageController = Get.put(PageControllerNavPages());
+  PageControllerNavPages pageController = Get.find<PageControllerNavPages>();
 
 
   @override
   void initState() {
-    services = Get.put(FireStoreServices());
+    services = Get.find<FireStoreServices>();
     services.getSongsFromFavorites();
     super.initState();
   }
@@ -123,6 +123,8 @@ class _InsidePlayListState extends State<InsidePlayList> {
               onTap: () {
                 controller.startPlaying(favorite); 
                   // controller.currentIndex.value = index - 1;
+                  services.currentPlayingList = services.favorite;
+
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const PlayerPage()),
@@ -143,7 +145,7 @@ class _InsidePlayListState extends State<InsidePlayList> {
                   height: 50,
                   width: 50,
                   child: Image(
-                    image: NetworkImage(favorite.cover),
+                    image: NetworkImage(favorite.coverurl),
                     fit: BoxFit.cover,
                   ),
                 ),

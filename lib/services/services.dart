@@ -1,7 +1,4 @@
-import 'dart:io';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:music_app/model/artist_model.dart';
 import 'package:music_app/model/song_model.dart';
@@ -9,64 +6,80 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 class FireStoreServices extends GetxController {
+  RxList<MySongs> currentPlayingList = <MySongs>[].obs;
+
   RxList<MySongs> quickpicks = <MySongs>[].obs;
   RxList<MySongs> favorite = <MySongs>[].obs;
   RxList playlists = [].obs;
   RxList playlistsIds = [].obs;
 
-
-
   RxList<Artist> artistsList = <Artist>[].obs;
   RxList<String> artistsDocIdList = <String>[].obs;
   RxList<MySongs> artistsongs = <MySongs>[].obs;
-  
 
-  final db = FirebaseFirestore.instance;
+  finishBuild() async {
+    
+
+  }
 
   void getQuickPicks() async {
+    if (quickpicks.isNotEmpty) {
+      return;
+    }
+     WidgetsBinding.instance.addPostFrameCallback((_) {
     quickpicks.clear();
-    await db.collection('quickpicks').get().then((v) {
-      for (var element in v.docs) {
-        quickpicks.add(MySongs.fromJson(element.data()));
-      }
     });
+    //   await db.collection('quickpicks').get().then((v) {
+    //   for (var element in v.docs) {
+    //     quickpicks.add(MySongs.fromJson(element.data()));
+    //   }
+    // });
   }
 
   void getArtists() async {
+     WidgetsBinding.instance.addPostFrameCallback((_) {
     artistsList.clear();
-    await db.collection('artists').get().then((v) {
-      for (var element in v.docs) {
-        artistsList.add(Artist.fromJson(element.data(), element.id));
-      } 
+      
     });
+    // await db.collection('artists').get().then((v) {
+    //   for (var element in v.docs) {
+    //     artistsList.add(Artist.fromJson(element.data(), element.id));
+    //   } 
+    // });
   }
 
   void getSongsUnderArtists(doc) async {
-  
+     WidgetsBinding.instance.addPostFrameCallback((_) {
     artistsongs.clear();
-    await db.collection('artists').doc(doc).collection('songs').get().then((v) {
-      for (var element in v.docs) {
-        artistsongs.add(MySongs.fromJson(element.data()));
-      }
+      
     });
+  
+    // await db.collection('artists').doc(doc).collection('songs').get().then((v) {
+    //   for (var element in v.docs) {
+    //     artistsongs.add(MySongs.fromJson(element.data()));
+    //   }
+    // });
   }
 
 void getSongsFromFavorites() async { 
   try {
+     WidgetsBinding.instance.addPostFrameCallback((_) {
     favorite.clear(); // Clear the local list before fetching data
+      
+    });
     final String deviceId = await getDeviceId();
 
     // Reference to the "songs" subcollection under the device's document
-    final songsCollection = await db
-        .collection('favorite')
-        .doc(deviceId)
-        .collection('songs')
-        .get();
+    // final songsCollection = await db
+    //     .collection('favorite')
+    //     .doc(deviceId)
+    //     .collection('songs')
+    //     .get();
 
     // Iterate over each song document and convert it into a MySongs object
-    for (var doc in songsCollection.docs) {
-      favorite.add(MySongs.fromJson(doc.data()));
-    }
+    // for (var doc in songsCollection.docs) {
+    //   favorite.add(MySongs.fromJson(doc.data()));
+    // }
 
     print("Fetched ${favorite.length} favorite songs.");
   } catch (e) {
@@ -81,19 +94,19 @@ Future<bool> isSongInFavorites(String song) async {
     final String deviceId = await getDeviceId();
 
     // Reference to the songs collection under the device's collection
-    final songsCollection = await db
-        .collection('favorite')
-        .doc(deviceId)
-        .collection('songs')
-        .where('song', isEqualTo: song) 
-        .get();
+    // final songsCollection = await db
+    //     .collection('favorite')
+    //     .doc(deviceId)
+    //     .collection('songs')
+    //     .where('song', isEqualTo: song) 
+    //     .get();
 
-       isExist = songsCollection.docs.isNotEmpty;
+      //  isExist = songsCollection.docs.isNotEmpty;
 
     // Check if any documents match the query 
     print("Error checking song existence shubha: $isExist");
 
-    return songsCollection.docs.isNotEmpty;
+    return isExist;
   } catch (e) {
     print("Error checking song existence: $e");
     return false;
@@ -106,13 +119,13 @@ Future<bool> addSongToFavorites(MySongs song) async {
     final String deviceId = await getDeviceId();
 
     // Reference to the "favorites" collection and document for the device
-    final deviceDoc = db.collection('favorite').doc(deviceId);
+    // final deviceDoc = db.collection('favorite').doc(deviceId);
 
     // Add the song details along with the timestamp
-    await deviceDoc.collection('songs').add({
-      ...song.toJson(),
-      'addedAt': FieldValue.serverTimestamp(), // Add Firestore server timestamp
-    });
+    // await deviceDoc.collection('songs').add({
+    //   ...song.toJson(),
+    //   'addedAt': FieldValue.serverTimestamp(), // Add Firestore server timestamp
+    // });
 
     print("Song added successfully!");
     return true;
@@ -135,16 +148,17 @@ Future<bool> addSongToFavorites(MySongs song) async {
 Future<bool> removeSongFromFavorites(MySongs song) async {
   try {
     final String deviceId = await getDeviceId();
-    final deviceDoc = db.collection('favorite').doc(deviceId);
+    // final deviceDoc = db.collection('favorite').doc(deviceId);
+
 
     // Query to find the song by songId
-    final querySnapshot = await deviceDoc.collection('songs')
-        .where('song', isEqualTo: song.song)
-        .get();
+    // final querySnapshot = await deviceDoc.collection('songs')
+    //     .where('song', isEqualTo: song.song)
+    //     .get();
 
-    for (var doc in querySnapshot.docs) {
-      await doc.reference.delete();  // Delete each matching document
-    }
+    // for (var doc in querySnapshot.docs) {
+    //   await doc.reference.delete();  // Delete each matching document
+    // }
 
     print("Song removed successfully!");
     return true;
@@ -156,28 +170,28 @@ Future<bool> removeSongFromFavorites(MySongs song) async {
 
 
 Future<List<Map<String, dynamic>>> searchSongs(String searchQuery) async {
-  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  // final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
   try {
     // Query the `songs` collection
-    QuerySnapshot querySnapshot = await firestore
-        .collection('songs')
-        .where('title', isGreaterThanOrEqualTo: searchQuery)
-        .where('title', isLessThanOrEqualTo: searchQuery + '\uf8ff')
-        .get();
+    // QuerySnapshot querySnapshot = await firestore
+    //     .collection('songs')
+    //     .where('title', isGreaterThanOrEqualTo: searchQuery)
+    //     .where('title', isLessThanOrEqualTo: searchQuery + '\uf8ff')
+    //     .get();
 
     // Convert query results to a list of maps
-    List<Map<String, dynamic>> songs = querySnapshot.docs.map((doc) {
-      return {
-        'songid': doc['songid'],
-        'title': doc['title'],
-        'artist': doc['artist'],
-        'song': doc['song'],
-        'cover': doc['cover'],
-      };
-    }).toList();
+    // List<Map<String, dynamic>> songs = querySnapshot.docs.map((doc) {
+    //   return {
+    //     'songid': doc['songid'],
+    //     'title': doc['title'],
+    //     'artist': doc['artist'],
+    //     'song': doc['song'],
+    //     'cover': doc['cover'],
+    //   };
+    // }).toList();
 
-    return songs;
+    return [];
   } catch (e) {
     print('Error searching songs: $e');
     return [];

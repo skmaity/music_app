@@ -11,9 +11,7 @@ class Songs extends StatefulWidget {
   State<Songs> createState() => _SongsState();
 }
 
-class _SongsState extends State<Songs> {
-
-  
+class _SongsState extends State<Songs> { 
 
   TextEditingController songQuery = TextEditingController();
 
@@ -21,8 +19,8 @@ class _SongsState extends State<Songs> {
 
 
  @override
-  void initState() {
-  services = Get.put(FireStoreServices());
+  void initState() { 
+  services = Get.find<FireStoreServices>();
     super.initState();
   }
 

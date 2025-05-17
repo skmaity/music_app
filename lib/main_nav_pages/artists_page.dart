@@ -6,7 +6,7 @@ import 'package:music_app/main_nav_pages/artist_page_change.dart';
 import 'package:music_app/player_page.dart';
 import 'package:music_app/services/services.dart';
 
-ArtistController _artistController = Get.put(ArtistController());
+ArtistController _artistController = Get.find<ArtistController>();
 
 class ArtistsPage extends StatefulWidget {
   const ArtistsPage({super.key});
@@ -38,7 +38,7 @@ class _ArtistsListsPageState extends State<ArtistsListsPage> {
 
   @override 
   void initState() {
-  services = Get.put(FireStoreServices());
+  services = Get.find<FireStoreServices>();
   services.getArtists();
     super.initState();
   }
@@ -256,8 +256,8 @@ class _ArtistSongsState extends State<ArtistSongs> {
 
   @override 
   void initState() {
-   services = Get.put(FireStoreServices());
-       controller = Get.put(SongController());
+   services = Get.find<FireStoreServices>();
+       controller = Get.find<SongController>();
 
     super.initState();
   }
@@ -311,6 +311,8 @@ class _ArtistSongsState extends State<ArtistSongs> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 10),
                 onTap: () {
                   controller.startPlaying(services.artistsongs[index]).then((_) { 
+                  services.currentPlayingList = services.artistsongs;
+
                     controller.currentIndex.value = index - 1; 
                     Navigator.push( 
                       context,
@@ -332,7 +334,7 @@ class _ArtistSongsState extends State<ArtistSongs> {
                     height: 50,
                     width: 50,
                     child: Image(
-                      image: NetworkImage(services.artistsongs[index].cover),
+                      image: NetworkImage(services.artistsongs[index].coverurl),
                       fit: BoxFit.cover,
                     ),
                   ),

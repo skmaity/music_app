@@ -14,7 +14,7 @@ class InternetController extends GetxController {
     super.onInit();
   }
 
-  final SongController _songController =  Get.put(SongController());
+  final SongController _songController =  Get.find<SongController>();
 
   checkInternet() async{
       log("The statement 'this machine is connected to the Internet' is: ");

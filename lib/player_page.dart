@@ -1,8 +1,10 @@
 import 'dart:ui';
-import 'package:animate_gradient/animate_gradient.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:get/get.dart';
+import 'package:music_app/all_urls.dart';
+import 'package:music_app/component/animated_gradient_widget.dart';
 import 'package:music_app/controller/background_controller.dart';
 import 'package:music_app/controller/song_controller.dart';
 import 'package:music_app/player_page_function.dart';
@@ -17,18 +19,18 @@ class PlayerPage extends StatefulWidget {
   State<PlayerPage> createState() => _PlayerPageState();
 }
 
-class _PlayerPageState extends State<PlayerPage> {
+class _PlayerPageState extends State<PlayerPage> { 
   late SongController controller;
   late FireStoreServices services;
 
   final BackgroundController _backgroundController =
-      Get.put(BackgroundController());
+      Get.find<BackgroundController>();
 
   @override
   void initState() {
-    controller = Get.put(SongController());
-    services = Get.put(FireStoreServices());
-    _backgroundController.updatePaletteGenerator();
+    controller = Get.find<SongController>();
+    services = Get.find<FireStoreServices>();
+    _backgroundController.updatePaletteGenerator(); 
     super.initState();
   }
 
@@ -39,22 +41,10 @@ class _PlayerPageState extends State<PlayerPage> {
     return '$minutes:$seconds';
   }
 
-    // Method to play the previous song
-  void playPreviousSong() {
-    if (controller.currentIndex.value > 0) {
-      // Play the previous song 
-      controller.currentIndex.value = controller.currentIndex.value - 1;
-      controller
-          .startPlaying(services.quickpicks[controller.currentIndex.value]);
-    } else {
-      // If it's the first song, go to the last song
-      controller.currentIndex.value = services.quickpicks.length - 1;
-      controller
-          .startPlaying(services.quickpicks[controller.currentIndex.value]);
-    }
-  }
+  // Method to play the previous song
+ 
 
-  final PlayerPageFunction _playerPageFunction = Get.put(PlayerPageFunction());
+  final PlayerPageFunction _playerPageFunction = Get.find<PlayerPageFunction>();
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +52,7 @@ class _PlayerPageState extends State<PlayerPage> {
       appBar: AppBar(
         leading: IconButton(
             onPressed: () {
+              _backgroundController.isFromSongLogo.value = true;
               Navigator.pop(context);
             },
             icon: const Hero(
@@ -84,9 +75,24 @@ class _PlayerPageState extends State<PlayerPage> {
       extendBody: true,
       body: Stack(alignment: Alignment.center, children: <Widget>[
         // const AnimatedBackground(),
-        AnimateGradient(
-          primaryColors: _backgroundController.primaryColorsList,
-          secondaryColors: _backgroundController.secondaryColorsList,
+        // AnimateGradient(
+        //   primaryColors: _backgroundController.primaryColorsList,
+        //   secondaryColors: _backgroundController.secondaryColorsList,
+        // ),
+        Obx(() {
+          return AnimatedGradient( 
+            primaryColors:
+                List<Color>.from(_backgroundController.primaryColorsList),
+            secondaryColors:
+                List<Color>.from(_backgroundController.secondaryColorsList),
+          );
+        }),
+        Obx(
+          ()=> AnimatedContainer(  
+              duration: Duration(milliseconds: _backgroundController.isVisible.value ? 600 : 5000),
+              color: Colors.black.withOpacity(_backgroundController.isVisible.value ? 1 : 0.0),
+              child: const SizedBox.expand(),
+            ),
         ),
         Obx(() {
           final currentPositionText =
@@ -114,12 +120,13 @@ class _PlayerPageState extends State<PlayerPage> {
                           ),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
-                            child: Image(
-                              height: 300,
-                              fit: BoxFit.cover,
-                              image:
-                                  NetworkImage(controller.currentPlaying.cover),
-                            ),
+                            child: 
+                                  CachedNetworkImage(
+                                    imageUrl:   baseUrl + controller.currentPlaying.coverurl,
+                                    fit: BoxFit.cover,
+                                    height: 300,
+                                    ),
+                            
                           ),
                           const SizedBox(
                             height: 5,
@@ -139,73 +146,71 @@ class _PlayerPageState extends State<PlayerPage> {
                                   ),
                                 ),
                               ),
-                            
-                                FutureBuilder(
-                                  future: services.isSongInFavorites(controller.currentPlaying.song),
-                                  builder: (context,snapshot) {
-                                    if(snapshot.hasData){
-return IconButton(
-                                      icon: Icon( snapshot.data!
-                                            ? FontAwesome.heart
-                                            : FontAwesome.heart_o,
-                                        color: Colors.white,
-                                        shadows: [
-                                          Shadow(
-                                            blurRadius:
-                                                snapshot.data! ? 9.0 : 0,
-                                            color: Colors.white,
-                                            offset: const Offset(0, 0),
-                                          ),
-                                        ],
-                                      ),
-                                      onPressed: () async {
-                                        if (!snapshot.data!) {
-                                          await services
-                                              .addSongToFavorites(
-                                                  controller.currentPlaying)
-                                              .then(
-                                            (value) {
-                                              if (value) {
-                                                _playerPageFunction
-                                                    .songAddedToFaviorateAlert(
-                                                  Get.context,
-                                                  controller.currentPlaying.title,
-                                                );
-                                              }
-                                            },
-                                          );
-                                        } else {
-                                          await services
-                                              .removeSongFromFavorites(
-                                                  controller.currentPlaying)
-                                              .then(
-                                            (value) {
-                                              _playerPageFunction
-                                                  .songRemovedFromFaviorateAlert(
-                                                Get.context,
-                                                controller.currentPlaying.title,
-                                              );
-                                            },
-                                          );
-                                        }
-                                    
-                                      },
-                                    );
-                                    }else{
-                                      return const SizedBox(
-                                        height: 25,
-                                        width: 25,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 1,
-                                          color: Colors.white,
-                                          
-                                        ),
-                                      );
-                                    }
-                                    
-                                  }
-                                ),
-                            
+                              // FutureBuilder(
+                              //     future: services.isSongInFavorites(
+                              //         controller.currentPlaying.song),
+                              //     builder: (context, snapshot) {
+                              //       if (snapshot.hasData) {
+                              //         return IconButton(
+                              //           icon: Icon(
+                              //             snapshot.data!
+                              //                 ? FontAwesome.heart
+                              //                 : FontAwesome.heart_o,
+                              //             color: Colors.white,
+                              //             shadows: [
+                              //               Shadow(
+                              //                 blurRadius:
+                              //                     snapshot.data! ? 9.0 : 0,
+                              //                 color: Colors.white,
+                              //                 offset: const Offset(0, 0),
+                              //               ),
+                              //             ],
+                              //           ),
+                              //           onPressed: () async {
+                              //             if (!snapshot.data!) {
+                              //               await services
+                              //                   .addSongToFavorites(
+                              //                       controller.currentPlaying)
+                              //                   .then(
+                              //                 (value) {
+                              //                   if (value) {
+                              //                     _playerPageFunction
+                              //                         .songAddedToFaviorateAlert(
+                              //                       Get.context,
+                              //                       controller
+                              //                           .currentPlaying.title,
+                              //                     );
+                              //                   }
+                              //                 },
+                              //               );
+                              //             } else {
+                              //               await services
+                              //                   .removeSongFromFavorites(
+                              //                       controller.currentPlaying)
+                              //                   .then(
+                              //                 (value) {
+                              //                   _playerPageFunction
+                              //                       .songRemovedFromFaviorateAlert(
+                              //                     Get.context,
+                              //                     controller
+                              //                         .currentPlaying.title,
+                              //                   );
+                              //                 },
+                              //               );
+                              //             }
+                              //           },
+                              //         );
+                              //       } else {
+                              //         return const SizedBox(
+                              //           height: 25,
+                              //           width: 25,
+                              //           child: CircularProgressIndicator(
+                              //             strokeWidth: 1,
+                              //             color: Colors.white,
+                              //           ),
+                              //         );
+                              //       }
+                              //     }),
                             ],
                           ),
                           const SizedBox(
@@ -290,7 +295,7 @@ return IconButton(
                     hoverElevation: 0,
                     focusElevation: 0,
                     highlightElevation: 0,
-                    onPressed: playPreviousSong,
+                    onPressed: controller.playPreviousSong,
                     child: const Icon(
                       shadows: [
                         Shadow(
@@ -332,7 +337,6 @@ return IconButton(
                       controller.isPlaying.value
                           ? controller.pausePlaying()
                           : controller.resumePlaying();
-                        
                     },
                   ),
                   FloatingActionButton.large(

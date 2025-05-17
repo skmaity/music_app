@@ -4,7 +4,7 @@ import 'package:get/get.dart';
 import 'package:music_app/services/services.dart';
 
 class PlaylistPageFunction extends GetxController{
-  FireStoreServices services = Get.put(FireStoreServices());
+  FireStoreServices services = Get.find<FireStoreServices>();
 
 
 Future<void> addNewPlayList(BuildContext context) async {

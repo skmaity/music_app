@@ -1,33 +1,59 @@
+
 import 'dart:convert';
 
-List<MySongs> mySongsFromJson(String str) => List<MySongs>.from(json.decode(str).map((x) => MySongs.fromJson(x)));
-
-String mySongsToJson(List<MySongs> data) => json.encode(List<dynamic>.from(data.map((x) => x.toJson())));
-
 class MySongs {
-    String artist;
-    String cover;
-    String song;
-    String title;
+     int songid;
+     String title;
+     String songurl;
+     String coverurl;
+     String artist;
+    int isquickpick;
 
     MySongs({
-        required this.artist,
-        required this.cover,
-        required this.song,
+        required this.songid,
         required this.title,
+        required this.songurl,
+        required this.coverurl,
+        required this.artist,
+        required this.isquickpick,
     });
 
+    MySongs copyWith({
+        int? songid,
+        String? title,
+        String? songurl,
+        String? coverurl,
+        String? artist,
+        int? isquickpick,
+    }) => 
+          MySongs(
+            songid: songid ?? this.songid,
+            title: title ?? this.title,
+            songurl: songurl ?? this.songurl,
+            coverurl: coverurl ?? this.coverurl,
+            artist: artist ?? this.artist,
+            isquickpick: isquickpick ?? this.isquickpick,
+        );
+
+    factory MySongs.fromRawJson(Map<String, dynamic> map) => MySongs.fromJson(map);
+
+    String toRawJson() => json.encode(toJson());
+
     factory MySongs.fromJson(Map<String, dynamic> json) => MySongs(
-        artist: json["artist"],
-        cover: json["cover"],
-        song: json["song"],
+        songid: json["songid"],
         title: json["title"],
+        songurl: json["songurl"],
+        coverurl: json["coverurl"],
+        artist: json["artist"],
+        isquickpick: json["isquickpick"],
     );
 
     Map<String, dynamic> toJson() => {
-        "artist": artist,
-        "cover": cover,
-        "song": song,
+        "songid": songid,
         "title": title,
+        "songurl": songurl,
+        "coverurl": coverurl,
+        "artist": artist,
+        "isquickpick": isquickpick,
     };
 }
