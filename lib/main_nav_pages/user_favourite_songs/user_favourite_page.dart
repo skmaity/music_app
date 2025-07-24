@@ -5,28 +5,28 @@ import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
 import 'package:music_app/all_urls.dart';
 import 'package:music_app/controller/song_controller.dart';
-import 'package:music_app/main_nav_pages/quick_picks/quick_picks_controller.dart';
+import 'package:music_app/controller/userid_controller.dart';
+import 'package:music_app/main_nav_pages/user_favourite_songs/controller/user_favourite_controller.dart';
 import 'package:music_app/player_page.dart';
-// import 'package:music_app/player_page.dart';
-// import 'package:music_app/services/services.dart';
 
-class QuickPicks extends StatefulWidget {
-  const QuickPicks({super.key});
+class UserFavouritePage extends StatefulWidget {
+  const UserFavouritePage({super.key});
 
   @override
-  State<QuickPicks> createState() => _QuickPicksState();
+  State<UserFavouritePage> createState() => _UserFavouritePageState();
 }
 
-class _QuickPicksState extends State<QuickPicks> {
-  // late FireStoreServices services;
+class _UserFavouritePageState extends State<UserFavouritePage> {
   late SongController controller;
-  late QuickPicksController quickpicksController;
+  late UserFavouriteController favouriteController;
+  late UseridController _useridController;
+
   @override
   void initState() {
     controller = Get.find<SongController>();
-    // services = Get.find<FireStoreServices>();
-    quickpicksController = Get.find<QuickPicksController>();
-    quickpicksController.getQuickPicks();
+    favouriteController = Get.find<UserFavouriteController>();
+    _useridController = Get.find<UseridController>();
+    favouriteController.getUserFavourites(_useridController.userId.toString());
     super.initState();
   }
 
@@ -49,7 +49,7 @@ class _QuickPicksState extends State<QuickPicks> {
                     Padding(
                       padding: const EdgeInsets.only(right: 10, top: 40),
                       child: Text(
-                        'Quick picks',
+                        'Favourites',
                         style: style,
                       ),
                     ),
@@ -65,9 +65,10 @@ class _QuickPicksState extends State<QuickPicks> {
           Expanded(
             child: AnimationLimiter(
               child: ListView.builder(
-                itemCount: quickpicksController.quickpicks.length,
+                itemCount: favouriteController.userFavoutitesList.length,
                 itemBuilder: (context, index) {
-                  final quickpick = quickpicksController.quickpicks[index];
+                  final quickpick =
+                      favouriteController.userFavoutitesList[index];
                   return AnimationConfiguration.staggeredList(
                     position: index,
                     delay: const Duration(milliseconds: 100),
@@ -88,7 +89,7 @@ class _QuickPicksState extends State<QuickPicks> {
                                 onTap: () {
                                   controller.startPlaying(quickpick);
                                   controller.currentPlayingList =
-                                      quickpicksController.quickpicks;
+                                      favouriteController.userFavoutitesList;
                                   controller.currentIndex.value = index;
                                   Navigator.push(
                                     context,

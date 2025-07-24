@@ -3,11 +3,13 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:get/get.dart';
+// import 'package:get/get_state_manager/src/simple/list_notifier.dart';
 import 'package:music_app/all_urls.dart';
 import 'package:music_app/component/animated_gradient_widget.dart';
 import 'package:music_app/controller/background_controller.dart';
 import 'package:music_app/controller/song_controller.dart';
-import 'package:music_app/player_page_function.dart';
+import 'package:music_app/controller/userid_controller.dart';
+// import 'package:music_app/player_page_function.dart';
 import 'package:music_app/services/services.dart';
 
 class PlayerPage extends StatefulWidget {
@@ -19,19 +21,45 @@ class PlayerPage extends StatefulWidget {
   State<PlayerPage> createState() => _PlayerPageState();
 }
 
-class _PlayerPageState extends State<PlayerPage> { 
+class _PlayerPageState extends State<PlayerPage>
+    with SingleTickerProviderStateMixin {
   late SongController controller;
   late FireStoreServices services;
 
   final BackgroundController _backgroundController =
       Get.find<BackgroundController>();
+  final UseridController _useridController = Get.find<UseridController>();
+
+  @override
+  void dispose() {
+    animationController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
     controller = Get.find<SongController>();
     services = Get.find<FireStoreServices>();
-    _backgroundController.updatePaletteGenerator(); 
+    _backgroundController.updatePaletteGenerator();
+    isFAvourite();
+    animationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: animationDurationMilliSeconds),
+    );
+    final curvedAnimation = CurvedAnimation(
+      parent: animationController,
+      curve: Curves.ease, // 👈 Change this curve to whatever you want
+    );
+    sizeAnimation = Tween<double>(begin: 25, end: 50).animate(curvedAnimation);
+    colourAnimation = ColorTween(begin: Colors.white, end: Colors.pinkAccent)
+        .animate(curvedAnimation);
     super.initState();
+  }
+
+  isFAvourite() async {
+    isFav.value = await controller.isFavouriteSong(
+        _useridController.userId.value,
+        controller.currentPlaying.songid.toString());
   }
 
   String formatDuration(Duration duration) {
@@ -41,10 +69,12 @@ class _PlayerPageState extends State<PlayerPage> {
     return '$minutes:$seconds';
   }
 
-  // Method to play the previous song
- 
+  RxBool isFav = false.obs;
 
-  final PlayerPageFunction _playerPageFunction = Get.find<PlayerPageFunction>();
+  late AnimationController animationController;
+  late Animation sizeAnimation;
+  late Animation colourAnimation;
+  int animationDurationMilliSeconds = 300;
 
   @override
   Widget build(BuildContext context) {
@@ -74,13 +104,8 @@ class _PlayerPageState extends State<PlayerPage> {
       extendBodyBehindAppBar: true,
       extendBody: true,
       body: Stack(alignment: Alignment.center, children: <Widget>[
-        // const AnimatedBackground(),
-        // AnimateGradient(
-        //   primaryColors: _backgroundController.primaryColorsList,
-        //   secondaryColors: _backgroundController.secondaryColorsList,
-        // ),
         Obx(() {
-          return AnimatedGradient( 
+          return AnimatedGradient(
             primaryColors:
                 List<Color>.from(_backgroundController.primaryColorsList),
             secondaryColors:
@@ -88,11 +113,14 @@ class _PlayerPageState extends State<PlayerPage> {
           );
         }),
         Obx(
-          ()=> AnimatedContainer(  
-              duration: Duration(milliseconds: _backgroundController.isVisible.value ? 600 : 5000),
-              color: Colors.black.withOpacity(_backgroundController.isVisible.value ? 1 : 0.0),
-              child: const SizedBox.expand(),
-            ),
+          () => AnimatedContainer(
+            duration: Duration(
+                milliseconds:
+                    _backgroundController.isVisible.value ? 600 : 5000),
+            color: Colors.black
+                .withOpacity(_backgroundController.isVisible.value ? 1 : 0.0),
+            child: const SizedBox.expand(),
+          ),
         ),
         Obx(() {
           final currentPositionText =
@@ -120,13 +148,12 @@ class _PlayerPageState extends State<PlayerPage> {
                           ),
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
-                            child: 
-                                  CachedNetworkImage(
-                                    imageUrl:   baseUrl + controller.currentPlaying.coverurl,
-                                    fit: BoxFit.cover,
-                                    height: 300,
-                                    ),
-                            
+                            child: CachedNetworkImage(
+                              imageUrl:
+                                  baseUrl + controller.currentPlaying.coverurl,
+                              fit: BoxFit.cover,
+                              height: 300,
+                            ),
                           ),
                           const SizedBox(
                             height: 5,
@@ -146,71 +173,44 @@ class _PlayerPageState extends State<PlayerPage> {
                                   ),
                                 ),
                               ),
-                              // FutureBuilder(
-                              //     future: services.isSongInFavorites(
-                              //         controller.currentPlaying.song),
-                              //     builder: (context, snapshot) {
-                              //       if (snapshot.hasData) {
-                              //         return IconButton(
-                              //           icon: Icon(
-                              //             snapshot.data!
-                              //                 ? FontAwesome.heart
-                              //                 : FontAwesome.heart_o,
-                              //             color: Colors.white,
-                              //             shadows: [
-                              //               Shadow(
-                              //                 blurRadius:
-                              //                     snapshot.data! ? 9.0 : 0,
-                              //                 color: Colors.white,
-                              //                 offset: const Offset(0, 0),
-                              //               ),
-                              //             ],
-                              //           ),
-                              //           onPressed: () async {
-                              //             if (!snapshot.data!) {
-                              //               await services
-                              //                   .addSongToFavorites(
-                              //                       controller.currentPlaying)
-                              //                   .then(
-                              //                 (value) {
-                              //                   if (value) {
-                              //                     _playerPageFunction
-                              //                         .songAddedToFaviorateAlert(
-                              //                       Get.context,
-                              //                       controller
-                              //                           .currentPlaying.title,
-                              //                     );
-                              //                   }
-                              //                 },
-                              //               );
-                              //             } else {
-                              //               await services
-                              //                   .removeSongFromFavorites(
-                              //                       controller.currentPlaying)
-                              //                   .then(
-                              //                 (value) {
-                              //                   _playerPageFunction
-                              //                       .songRemovedFromFaviorateAlert(
-                              //                     Get.context,
-                              //                     controller
-                              //                         .currentPlaying.title,
-                              //                   );
-                              //                 },
-                              //               );
-                              //             }
-                              //           },
-                              //         );
-                              //       } else {
-                              //         return const SizedBox(
-                              //           height: 25,
-                              //           width: 25,
-                              //           child: CircularProgressIndicator(
-                              //             strokeWidth: 1,
-                              //             color: Colors.white,
-                              //           ),
-                              //         );
-                              //       }
-                              //     }),
+                              SizedBox(
+                                height: 60,
+                                width: 60,
+                                child: IconButton(
+                                  icon: Icon(
+                                    isFav.value
+                                        ? FontAwesome.heart
+                                        : FontAwesome.heart_o,
+                                    color: colourAnimation.value,
+                                    size: sizeAnimation.value,
+                                    shadows: [
+                                      Shadow(
+                                        blurRadius: true ? 9.0 : 0,
+                                        color: colourAnimation.value,
+                                        offset: const Offset(0, 0),
+                                      ),
+                                    ],
+                                  ),
+                                  onPressed: () async {
+                                    if (!isFav.value) {
+                                      animationController.forward().then((v) {
+                                        animationController.reverse();
+                                      });
+                                      controller.addFavourite(
+                                          _useridController.userId.value,
+                                          controller.currentPlaying.songid
+                                              .toString());
+                                    } else {
+                                      controller.removeFromFavourite(
+                                          _useridController.userId.value,
+                                          controller.currentPlaying.songid
+                                              .toString());
+                                    }
+
+                                    isFav.value = !isFav.value;
+                                  },
+                                ),
+                              )
                             ],
                           ),
                           const SizedBox(

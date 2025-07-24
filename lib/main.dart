@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:music_app/bindings.dart';
+import 'package:music_app/controller/userid_controller.dart';
 import 'package:music_app/dashboard_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  Get.put(UseridController());
   runApp(const MyApp());
 }
 
@@ -14,21 +16,18 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return GetMaterialApp(
-        title: 'Music App', 
+        title: 'Music App',
         debugShowCheckedModeBanner: false,
-        initialBinding: InitialScreenBindings(),    
+        initialBinding: InitialScreenBindings(),
         theme: ThemeData(
-          textButtonTheme: TextButtonThemeData(
-            style: ButtonStyle(
+            textButtonTheme: TextButtonThemeData(
+                style: ButtonStyle(
               textStyle: WidgetStatePropertyAll(GoogleFonts.pacifico()),
-            ),
-          ),
-          textTheme: GoogleFonts.josefinSansTextTheme(),
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-          useMaterial3: true,
-        ),
+            )),
+            textTheme: GoogleFonts.josefinSansTextTheme(),
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+            useMaterial3: true),
         home: const Dashboard());
   }
 }

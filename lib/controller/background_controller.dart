@@ -79,9 +79,8 @@ class BackgroundController extends GetxController {
         );
         primaryColorsList.clear();
         secondaryColorsList.clear();
-
         primaryColorsList 
-            .add(paletteGenerator!.dominantColor?.color ?? Colors.white);
+            .add(paletteGenerator!.vibrantColor?.color ?? Colors.white);
         primaryColorsList
             .add(paletteGenerator!.darkMutedColor?.color ?? Colors.white);
 

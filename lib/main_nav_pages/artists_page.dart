@@ -311,10 +311,10 @@ class _ArtistSongsState extends State<ArtistSongs> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 10),
                 onTap: () {
                   controller.startPlaying(services.artistsongs[index]).then((_) { 
-                  services.currentPlayingList = services.artistsongs;
+                  controller.currentPlayingList = services.artistsongs;
 
                     controller.currentIndex.value = index - 1; 
-                    Navigator.push( 
+                    Navigator.push(    
                       context,
                       MaterialPageRoute(builder: (context) => const PlayerPage()),
                     );

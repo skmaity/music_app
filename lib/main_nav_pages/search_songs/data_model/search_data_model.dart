@@ -1,32 +1,37 @@
+// To parse this JSON data, do
+//
+//     final searchDataModel = searchDataModelFromJson(jsonString);
+
 import 'dart:convert';
 
 import 'package:music_app/model/song_model.dart';
 
-class Quickpicksresponce {
+SearchDataModel searchDataModelFromJson(String str) =>
+    SearchDataModel.fromJson(json.decode(str));
+
+String searchDataModelToJson(SearchDataModel data) =>
+    json.encode(data.toJson());
+
+class SearchDataModel {
   final bool success;
   final List<MySongs> data;
 
-  Quickpicksresponce({
+  SearchDataModel({
     required this.success,
     required this.data,
   });
 
-  Quickpicksresponce copyWith({
+  SearchDataModel copyWith({
     bool? success,
     List<MySongs>? data,
   }) =>
-      Quickpicksresponce(
+      SearchDataModel(
         success: success ?? this.success,
         data: data ?? this.data,
       );
 
-  factory Quickpicksresponce.fromRawJson(Map<String, dynamic> map) =>
-      Quickpicksresponce.fromJson(map);
-
-  String toRawJson() => json.encode(toJson());
-
-  factory Quickpicksresponce.fromJson(Map<String, dynamic> json) =>
-      Quickpicksresponce(
+  factory SearchDataModel.fromJson(Map<String, dynamic> json) =>
+      SearchDataModel(
         success: json["success"],
         data: List<MySongs>.from(json["data"].map((x) => MySongs.fromJson(x))),
       );

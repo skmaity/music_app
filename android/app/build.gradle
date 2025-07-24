@@ -6,8 +6,8 @@ plugins {
 
 android {
     namespace = "com.shubha.music"
-    compileSdk = 34
-    ndkVersion = 34
+    compileSdk = 36
+    ndkVersion = "27.2.12479018"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8

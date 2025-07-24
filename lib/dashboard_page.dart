@@ -9,10 +9,11 @@ import 'package:music_app/main_nav_pages/artists_page.dart';
 import 'package:music_app/controller/background_controller.dart';
 import 'package:music_app/controller/internet_controller.dart';
 import 'package:music_app/main_nav_pages/settings.dart';
+import 'package:music_app/main_nav_pages/user_favourite_songs/user_favourite_page.dart';
 import 'package:music_app/nointernet_page.dart';
-import 'package:music_app/main_nav_pages/playlists.dart';
+// import 'package:music_app/main_nav_pages/playlists.dart';
 import 'package:music_app/main_nav_pages/quick_picks/quick_picks.dart';
-import 'package:music_app/main_nav_pages/songs.dart';
+import 'package:music_app/main_nav_pages/search_songs/songs.dart';
 import 'package:music_app/player_page.dart';
 
 class Dashboard extends StatefulWidget {
@@ -30,10 +31,10 @@ class _DashboardState extends State<Dashboard> {
 
   List<Widget> pages = [
     const QuickPicks(),
-    const Songs(),
-    const Playlists(),
+    const SearchSongs(),
+    UserFavouritePage(),
+    // const Playlists(),
     const ArtistsPage(),
-    // const Albums() ,
     const Settings(),
   ];
 
@@ -70,13 +71,16 @@ class _DashboardState extends State<Dashboard> {
                   List<Color>.from(backgroundcontroller.secondaryColorsList),
             );
           }),
-         Obx(
-          ()=> AnimatedContainer(  
-              duration: Duration(milliseconds: backgroundcontroller.isVisible.value ? 600 : 3000),
-              color: Colors.black.withOpacity(backgroundcontroller.isVisible.value ? 1 : 0.1),
+          Obx(
+            () => AnimatedContainer(
+              duration: Duration(
+                  milliseconds:
+                      backgroundcontroller.isVisible.value ? 600 : 3000),
+              color: Colors.black
+                  .withOpacity(backgroundcontroller.isVisible.value ? 1 : 0.1),
               child: const SizedBox.expand(),
             ),
-        ),
+          ),
           Row(
             children: [
               Obx(
@@ -87,8 +91,9 @@ class _DashboardState extends State<Dashboard> {
                       songcontroller.isPlaying.value
                           ? InkWell(
                               onTap: () {
-                                backgroundcontroller.isFromSongLogo.value = true;
-                  
+                                backgroundcontroller.isFromSongLogo.value =
+                                    true;
+
                                 Get.to(() => const PlayerPage());
                               },
                               child: Stack(
@@ -107,7 +112,8 @@ class _DashboardState extends State<Dashboard> {
                                     ),
                                     Container(
                                       decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(20),
+                                          borderRadius:
+                                              BorderRadius.circular(20),
                                           color: Colors.grey.shade100
                                               .withOpacity(0.4)),
                                       child: const Padding(
@@ -139,7 +145,7 @@ class _DashboardState extends State<Dashboard> {
                           filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
                           child: Container(
                             //  height: 400,
-                  
+
                             decoration: BoxDecoration(
                                 color: Colors.grey.shade100.withOpacity(0.4)),
                             child: Padding(
@@ -394,7 +400,7 @@ class _DashboardState extends State<Dashboard> {
               ),
               Obx(
                 () => Expanded(
-                  child: AnimatedSwitcher( 
+                  child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 800),
                       transitionBuilder:
                           (Widget child, Animation<double> animation) {
@@ -403,7 +409,7 @@ class _DashboardState extends State<Dashboard> {
                           end: const Offset(0.0, 0.0),
                         ).animate(animation);
 
-                        return SlideTransition( 
+                        return SlideTransition(
                           position: slideAnimation,
                           child:
                               FadeTransition(opacity: animation, child: child),
@@ -411,10 +417,7 @@ class _DashboardState extends State<Dashboard> {
                       },
                       child: internetController.internet.value
                           ? pages[pageIndex.value]
-                          : const NointernetPage()
-
-                      // child : const NointernetPage(),
-                      ),
+                          : const NointernetPage()),
                 ),
               ),
             ],

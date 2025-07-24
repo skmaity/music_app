@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
 class FireStoreServices extends GetxController {
-  RxList<MySongs> currentPlayingList = <MySongs>[].obs;
 
   RxList<MySongs> quickpicks = <MySongs>[].obs;
   RxList<MySongs> favorite = <MySongs>[].obs;

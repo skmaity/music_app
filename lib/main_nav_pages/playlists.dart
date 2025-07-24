@@ -44,7 +44,7 @@ class _InsidePlayListState extends State<InsidePlayList> {
 
   @override
   void initState() {
-    services = Get.find<FireStoreServices>();
+    // services = Get.find<FireStoreServices>();
     services.getSongsFromFavorites();
     super.initState();
   }
@@ -123,7 +123,7 @@ class _InsidePlayListState extends State<InsidePlayList> {
               onTap: () {
                 controller.startPlaying(favorite); 
                   // controller.currentIndex.value = index - 1;
-                  services.currentPlayingList = services.favorite;
+                  controller.currentPlayingList = services.favorite;
 
                   Navigator.push(
                     context,
