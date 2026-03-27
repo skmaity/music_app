@@ -1,10 +1,8 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart' hide Response;
-import 'package:get/get_core/src/get_main.dart';
-import 'package:get/get_rx/src/rx_types/rx_types.dart';
-import 'package:get/get_state_manager/src/simple/get_controllers.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:music_app/all_urls.dart';
+import 'package:music_app/apis/all_urls.dart';
 import 'package:music_app/controller/background_controller.dart';
 import 'package:music_app/model/song_model.dart';
 import 'package:music_app/services/services.dart';
@@ -58,27 +56,33 @@ class SongController extends GetxController {
   final FireStoreServices services = Get.find<FireStoreServices>();
 
   // Start playing a song
-  startPlaying(MySongs song) async {
-    BackgroundController backgroundController =
-        Get.find<BackgroundController>();
+  Future<void> startPlaying(MySongs song) async {
+    try {
+      BackgroundController backgroundController =
+          Get.find<BackgroundController>();
 
-    if (song == currentPlaying) {
-      // If the song is already playing, just return
-      return;
+      if (song == currentPlaying) {
+        return;
+      }
+
+      backgroundController.showVisibility();
+
+      if (player.playing) {
+        await player.stop();
+      }
+
+      currentPlaying = song;
+      isPlaying.value = true;
+
+      final url = baseUrl + song.songurl;
+
+      await player.setUrl(url);
+      await player.play();
+
+      backgroundController.updatePaletteGenerator();
+    } catch (e) {
+      debugPrint('Error playing song: $e');
     }
-    backgroundController.showVisibility();
-    // Check if the player is currently playing
-    if (player.playing) {
-      await player.stop(); // Stop the current playback
-    }
-
-    currentPlaying = song;
-    isPlaying.value = true;
-
-    // Play the new song
-    await player.setUrl(baseUrl + song.songurl);
-    await player.play();
-    backgroundController.updatePaletteGenerator();
   }
 
   void playNextSong() {
@@ -109,25 +113,25 @@ class SongController extends GetxController {
   }
 
   // Resume playing the current song
-  resumePlaying() {
+  void resumePlaying() {
     player.play();
     isPlaying.value = true;
   }
 
   // Pause the current song
-  pausePlaying() async {
+  Future<void> pausePlaying() async {
     await player.pause();
     isPlaying.value = false;
   }
 
   // Stop and dispose the player
-  disposePlayer() async {
+  Future<void> disposePlayer() async {
     await player.stop();
     await player.dispose();
   }
 
   // Seek to a specific position in the song
-  seekTo(Duration position) async {
+  Future<void> seekTo(Duration position) async {
     await player.seek(position);
   }
 

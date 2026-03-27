@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:get/get.dart' hide Response;
-import 'package:music_app/all_urls.dart';
+import 'package:music_app/apis/all_urls.dart';
 import 'package:music_app/model/song_model.dart';
 
 class SearchSongController extends GetxController {

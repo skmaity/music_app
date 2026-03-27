@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:music_app/bindings.dart';
+import 'package:music_app/core/bindings.dart';
 import 'package:music_app/controller/userid_controller.dart';
 import 'package:music_app/dashboard_page.dart';
 

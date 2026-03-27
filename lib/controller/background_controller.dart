@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:music_app/all_urls.dart';
+import 'package:music_app/apis/all_urls.dart';
 import 'package:music_app/controller/song_controller.dart';
 import 'package:palette_generator/palette_generator.dart';
 import 'package:http/http.dart' as http;
@@ -8,20 +8,19 @@ import 'package:get/get.dart';
 import 'dart:ui' as ui;
 
 class BackgroundController extends GetxController {
-
   hideVisibility() {
     Future.delayed(const Duration(milliseconds: 300), () {
       isVisible.value = false;
     });
   }
+
   showVisibility() {
     if (isFromSongLogo.value) {
       isFromSongLogo.value = false;
       return;
     }
-     Future.delayed(const Duration(seconds: 0), () {
-          isVisible.value = true;
-
+    Future.delayed(const Duration(seconds: 0), () {
+      isVisible.value = true;
     });
   }
 
@@ -57,15 +56,12 @@ class BackgroundController extends GetxController {
   }
 
   PaletteGenerator? paletteGenerator;
-  String altImage =
-      "uploads/covers/alt_image_bg.jpg";
+  String altImage = "uploads/covers/alt_image_bg.jpg";
 
   Future<void> updatePaletteGenerator() async {
     try {
-
-
-      if (controller.currentPlaying.coverurl != "coverurl") {  
-    showVisibility(); 
+      if (controller.currentPlaying.coverurl != "coverurl") {
+        showVisibility();
 
 // Get the image size from the URL
         List<double> dimensions =
@@ -73,13 +69,13 @@ class BackgroundController extends GetxController {
 
         // Use the dimensions to set the size in PaletteGenerator
         paletteGenerator = await PaletteGenerator.fromImageProvider(
-          NetworkImage( baseUrl + controller.currentPlaying.coverurl),
+          NetworkImage(baseUrl + controller.currentPlaying.coverurl),
           size: Size(dimensions[0], dimensions[1]),
           maximumColorCount: 20,
         );
         primaryColorsList.clear();
         secondaryColorsList.clear();
-        primaryColorsList 
+        primaryColorsList
             .add(paletteGenerator!.vibrantColor?.color ?? Colors.white);
         primaryColorsList
             .add(paletteGenerator!.darkMutedColor?.color ?? Colors.white);
@@ -88,18 +84,15 @@ class BackgroundController extends GetxController {
             .add(paletteGenerator!.dominantColor?.color ?? Colors.white);
         secondaryColorsList
             .add(paletteGenerator!.mutedColor?.color ?? Colors.white);
-    hideVisibility();
-
+        hideVisibility();
       } else {
-        controller.currentPlaying.coverurl = altImage;  
-        updatePaletteGenerator(); 
+        controller.currentPlaying.coverurl = altImage;
+        updatePaletteGenerator();
       }
-
     } catch (e) {
       // Handle any errors that occur during the process
       print("Error generating palette: $e");
-    showVisibility(); 
-
+      showVisibility();
     }
   }
 }

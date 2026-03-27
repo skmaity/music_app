@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:get/get.dart';
 // import 'package:get/get_state_manager/src/simple/list_notifier.dart';
-import 'package:music_app/all_urls.dart';
+import 'package:music_app/apis/all_urls.dart';
 import 'package:music_app/component/animated_gradient_widget.dart';
 import 'package:music_app/controller/background_controller.dart';
 import 'package:music_app/controller/song_controller.dart';

@@ -2,11 +2,11 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
-import 'package:music_app/all_urls.dart';
+import 'package:music_app/apis/all_urls.dart';
 import 'package:music_app/controller/song_controller.dart';
 import 'package:music_app/main_nav_pages/search_songs/controllers/search_song_controller.dart';
 import 'package:music_app/model/song_model.dart';
-import 'package:music_app/player_page.dart';
+import 'package:music_app/player_page/player_page.dart';
 
 class SearchSongs extends StatefulWidget {
   const SearchSongs({super.key});

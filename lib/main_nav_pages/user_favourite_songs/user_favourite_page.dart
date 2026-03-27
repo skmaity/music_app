@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
-import 'package:music_app/all_urls.dart';
+import 'package:music_app/apis/all_urls.dart';
 import 'package:music_app/controller/song_controller.dart';
 import 'package:music_app/controller/userid_controller.dart';
 import 'package:music_app/main_nav_pages/user_favourite_songs/controller/user_favourite_controller.dart';
-import 'package:music_app/player_page.dart';
+import 'package:music_app/player_page/player_page.dart';
 
 class UserFavouritePage extends StatefulWidget {
   const UserFavouritePage({super.key});

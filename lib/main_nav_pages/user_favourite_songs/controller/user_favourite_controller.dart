@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 import 'package:get/get.dart';
-import 'package:music_app/all_urls.dart';
+import 'package:music_app/apis/all_urls.dart';
 import 'package:music_app/main_nav_pages/user_favourite_songs/model/user_favourites_model.dart';
 import 'package:music_app/model/song_model.dart';
 

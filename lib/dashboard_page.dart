@@ -5,16 +5,15 @@ import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:get/get.dart';
 import 'package:music_app/component/animated_gradient_widget.dart';
 import 'package:music_app/controller/song_controller.dart';
-import 'package:music_app/main_nav_pages/artists_page.dart';
+import 'package:music_app/main_nav_pages/artists/artists_page.dart';
 import 'package:music_app/controller/background_controller.dart';
 import 'package:music_app/controller/internet_controller.dart';
-import 'package:music_app/main_nav_pages/settings.dart';
+import 'package:music_app/main_nav_pages/settings/settings.dart';
 import 'package:music_app/main_nav_pages/user_favourite_songs/user_favourite_page.dart';
-import 'package:music_app/nointernet_page.dart';
-// import 'package:music_app/main_nav_pages/playlists.dart';
+import 'package:music_app/global_widgets/nointernet_page.dart';
 import 'package:music_app/main_nav_pages/quick_picks/quick_picks.dart';
 import 'package:music_app/main_nav_pages/search_songs/songs.dart';
-import 'package:music_app/player_page.dart';
+import 'package:music_app/player_page/player_page.dart';
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});

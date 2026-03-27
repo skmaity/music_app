@@ -6,7 +6,7 @@ import 'package:music_app/controller/song_controller.dart';
 import 'package:music_app/main_nav_pages/page_controller/page_controller.dart';
 import 'package:music_app/main_nav_pages/quick_picks/quick_picks_controller.dart';
 import 'package:music_app/main_nav_pages/user_favourite_songs/controller/user_favourite_controller.dart';
-import 'package:music_app/player_page_function.dart';
+import 'package:music_app/player_page/player_page_function.dart';
 import 'package:music_app/services/services.dart';
 
 class InitialScreenBindings implements Bindings {
