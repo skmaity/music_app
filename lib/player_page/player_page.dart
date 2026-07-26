@@ -8,7 +8,6 @@ import 'package:music_app/apis/all_urls.dart';
 import 'package:music_app/component/animated_gradient_widget.dart';
 import 'package:music_app/controller/background_controller.dart';
 import 'package:music_app/controller/song_controller.dart';
-import 'package:music_app/controller/userid_controller.dart';
 // import 'package:music_app/player_page_function.dart';
 import 'package:music_app/services/services.dart';
 
@@ -28,7 +27,6 @@ class _PlayerPageState extends State<PlayerPage>
 
   final BackgroundController _backgroundController =
       Get.find<BackgroundController>();
-  final UseridController _useridController = Get.find<UseridController>();
 
   @override
   void dispose() {
@@ -41,7 +39,7 @@ class _PlayerPageState extends State<PlayerPage>
     controller = Get.find<SongController>();
     services = Get.find<FireStoreServices>();
     _backgroundController.updatePaletteGenerator();
-    isFAvourite();
+    controller.refreshFavouriteStatus();
     animationController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: animationDurationMilliSeconds),
@@ -56,20 +54,12 @@ class _PlayerPageState extends State<PlayerPage>
     super.initState();
   }
 
-  isFAvourite() async {
-    isFav.value = await controller.isFavouriteSong(
-        _useridController.userId.value,
-        controller.currentPlaying.songid.toString());
-  }
-
   String formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final minutes = twoDigits(duration.inMinutes.remainder(60));
     final seconds = twoDigits(duration.inSeconds.remainder(60));
     return '$minutes:$seconds';
   }
-
-  RxBool isFav = false.obs;
 
   late AnimationController animationController;
   late Animation sizeAnimation;
@@ -150,7 +140,8 @@ class _PlayerPageState extends State<PlayerPage>
                             borderRadius: BorderRadius.circular(4),
                             child: CachedNetworkImage(
                               imageUrl:
-                                  baseUrl + controller.currentPlaying.coverurl,
+                                  baseUrl +
+                                      controller.currentPlaying.value.coverurl,
                               fit: BoxFit.cover,
                               height: 300,
                             ),
@@ -166,7 +157,7 @@ class _PlayerPageState extends State<PlayerPage>
                               Expanded(
                                 child: Text(
                                   overflow: TextOverflow.ellipsis,
-                                  "${controller.currentPlaying.title} - ${controller.currentPlaying.artist}",
+                                  "${controller.currentPlaying.value.title} - ${controller.currentPlaying.value.artist}",
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 18,
@@ -178,36 +169,31 @@ class _PlayerPageState extends State<PlayerPage>
                                 width: 60,
                                 child: IconButton(
                                   icon: Icon(
-                                    isFav.value
+                                    controller.isFavourite.value
                                         ? FontAwesome.heart
                                         : FontAwesome.heart_o,
                                     color: colourAnimation.value,
                                     size: sizeAnimation.value,
                                     shadows: [
                                       Shadow(
-                                        blurRadius: true ? 9.0 : 0,
+                                        blurRadius: 9.0,
                                         color: colourAnimation.value,
                                         offset: const Offset(0, 0),
                                       ),
                                     ],
                                   ),
                                   onPressed: () async {
-                                    if (!isFav.value) {
+                                    final wasFavourite =
+                                        controller.isFavourite.value;
+                                    await controller.toggleFavourite();
+                                    // Only pop the heart if the server
+                                    // actually accepted the new favourite
+                                    if (!wasFavourite &&
+                                        controller.isFavourite.value) {
                                       animationController.forward().then((v) {
                                         animationController.reverse();
                                       });
-                                      controller.addFavourite(
-                                          _useridController.userId.value,
-                                          controller.currentPlaying.songid
-                                              .toString());
-                                    } else {
-                                      controller.removeFromFavourite(
-                                          _useridController.userId.value,
-                                          controller.currentPlaying.songid
-                                              .toString());
                                     }
-
-                                    isFav.value = !isFav.value;
                                   },
                                 ),
                               )

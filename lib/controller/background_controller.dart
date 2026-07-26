@@ -60,16 +60,16 @@ class BackgroundController extends GetxController {
 
   Future<void> updatePaletteGenerator() async {
     try {
-      if (controller.currentPlaying.coverurl != "coverurl") {
+      if (controller.currentPlaying.value.coverurl != "coverurl") {
         showVisibility();
 
 // Get the image size from the URL
         List<double> dimensions =
-            await getImageSize(baseUrl + controller.currentPlaying.coverurl);
+            await getImageSize(baseUrl + controller.currentPlaying.value.coverurl);
 
         // Use the dimensions to set the size in PaletteGenerator
         paletteGenerator = await PaletteGenerator.fromImageProvider(
-          NetworkImage(baseUrl + controller.currentPlaying.coverurl),
+          NetworkImage(baseUrl + controller.currentPlaying.value.coverurl),
           size: Size(dimensions[0], dimensions[1]),
           maximumColorCount: 20,
         );
@@ -86,7 +86,7 @@ class BackgroundController extends GetxController {
             .add(paletteGenerator!.mutedColor?.color ?? Colors.white);
         hideVisibility();
       } else {
-        controller.currentPlaying.coverurl = altImage;
+        controller.currentPlaying.value.coverurl = altImage;
         updatePaletteGenerator();
       }
     } catch (e) {

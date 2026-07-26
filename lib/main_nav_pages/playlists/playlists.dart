@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_vector_icons/flutter_vector_icons.dart';
 import 'package:get/get.dart';
 import 'package:music_app/controller/song_controller.dart';
 import 'package:music_app/main_nav_pages/page_controller/page_controller.dart';
 import 'package:music_app/player_page/player_page.dart';
-import 'package:music_app/main_nav_pages/playlists/playlist_page_function.dart';
 import 'package:music_app/services/services.dart';
 
 class Playlists extends StatefulWidget {

@@ -34,6 +34,15 @@ class MySongs {
         isquickpick: isquickpick ?? this.isquickpick,
       );
 
+  void clear() {
+    songid = 0;
+    title = '';
+    songurl = '';
+    coverurl = '';
+    artist = '';
+    isquickpick = 0;
+  }
+
   factory MySongs.fromRawJson(Map<String, dynamic> map) =>
       MySongs.fromJson(map);
 

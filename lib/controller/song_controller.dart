@@ -4,6 +4,8 @@ import 'package:get/get.dart' hide Response;
 import 'package:just_audio/just_audio.dart';
 import 'package:music_app/apis/all_urls.dart';
 import 'package:music_app/controller/background_controller.dart';
+import 'package:music_app/controller/userid_controller.dart';
+import 'package:music_app/main_nav_pages/user_favourite_songs/controller/user_favourite_controller.dart';
 import 'package:music_app/model/song_model.dart';
 import 'package:music_app/services/services.dart';
 
@@ -13,15 +15,19 @@ class SongController extends GetxController {
 
   RxBool isPlaying = false.obs;
 
-  MySongs currentPlaying = MySongs(
-      songid: 0,
-      artist: 'artist',
-      coverurl: 'coverurl',
-      songurl: 'songurl',
-      title: 'title',
-      isquickpick: 0);
+  Rx<MySongs> currentPlaying = MySongs(
+          songid: 0,
+          artist: 'artist',
+          coverurl: 'coverurl',
+          songurl: 'songurl',
+          title: 'title',
+          isquickpick: 0)
+      .obs;
   RxInt currentIndex = (-1).obs;
   RxList<MySongs> currentPlayingList = <MySongs>[].obs;
+
+  // Whether [currentPlaying] is in the user's favourites
+  RxBool isFavourite = false.obs;
 
   // New variables for tracking song position and duration
   Rx<Duration> currentPosition = Duration.zero.obs;
@@ -43,14 +49,12 @@ class SongController extends GetxController {
     });
 
     // Listen to when the player finishes playing
-    // player.playbackStateStream.listen((event) {
-    //   if (event.processingState == ProcessingState.completed) {
-    //     isPlaying.value = false;
-    //     currentPosition.value = Duration.zero;
-    //     playNextSong();
-    //   }
-    // }
-    // );
+    player.processingStateStream.listen((state) {
+      if (state == ProcessingState.completed) {
+        currentPosition.value = Duration.zero;
+        playNextSong();
+      }
+    });
   }
 
   final FireStoreServices services = Get.find<FireStoreServices>();
@@ -61,7 +65,9 @@ class SongController extends GetxController {
       BackgroundController backgroundController =
           Get.find<BackgroundController>();
 
-      if (song == currentPlaying) {
+      // Allow replaying the same song once it has finished
+      if (song == currentPlaying.value &&
+          player.processingState != ProcessingState.completed) {
         return;
       }
 
@@ -70,8 +76,8 @@ class SongController extends GetxController {
       if (player.playing) {
         await player.stop();
       }
-
-      currentPlaying = song;
+      currentPlaying.value.clear();
+      currentPlaying.value = song;
       isPlaying.value = true;
 
       final url = baseUrl + song.songurl;
@@ -80,12 +86,15 @@ class SongController extends GetxController {
       await player.play();
 
       backgroundController.updatePaletteGenerator();
+      refreshFavouriteStatus();
     } catch (e) {
       debugPrint('Error playing song: $e');
     }
   }
 
   void playNextSong() {
+    if (currentPlayingList.isEmpty) return;
+
     if (currentPlayingList.length > currentIndex.value + 1) {
       // Play the next song
       currentIndex.value = currentIndex.value + 1;
@@ -141,54 +150,62 @@ class SongController extends GetxController {
         totalDuration.value.inMilliseconds;
   }
 
-  Future<bool> addFavourite(String userid, String songId) async {
-    String url = addToFavouriteUrl;
-
-    Map<String, dynamic> payLoad = {"userid": userid, "songid": songId};
-    Response res = await dio.post(url, data: payLoad);
-
-    if (res.statusCode == 200) {
-      if (res.data['success'] == true) {
-        return true;
-      } else {
-        return false;
+  // The favourite endpoints only accept POST with a JSON body:
+  // GET (even with a body) is rejected by the host with a 403.
+  Future<Map<String, dynamic>?> _postFavourite(
+      String url, String userid, String songId) async {
+    try {
+      final res =
+          await dio.post(url, data: {"userid": userid, "songid": songId});
+      if (res.statusCode == 200 && res.data is Map) {
+        return Map<String, dynamic>.from(res.data);
       }
-    } else {
-      return false;
+    } catch (e) {
+      debugPrint('Favourite request failed ($url): $e');
     }
+    return null;
+  }
+
+  Future<bool> addFavourite(String userid, String songId) async {
+    final data = await _postFavourite(addToFavouriteUrl, userid, songId);
+    return data?['success'] == true;
   }
 
   Future<bool> removeFromFavourite(String userid, String songId) async {
-    String url = removeFromFavouriteUrl;
-
-    Map<String, dynamic> payLoad = {"userid": userid, "songid": songId};
-    Response res = await dio.delete(url, data: payLoad);
-
-    if (res.statusCode == 200) {
-      if (res.data['success'] == true) {
-        return true;
-      } else {
-        return false;
-      }
-    } else {
-      return false;
-    }
+    final data = await _postFavourite(removeFromFavouriteUrl, userid, songId);
+    return data?['success'] == true;
   }
 
   Future<bool> isFavouriteSong(String userid, String songId) async {
-    String url = checkIfFavouriteUrl;
+    final data = await _postFavourite(checkIfFavouriteUrl, userid, songId);
+    return data?['success'] == true && data?['is_favorite'] == true;
+  }
 
-    Map<String, dynamic> payLoad = {"userid": userid, "songid": songId};
-    Response res = await dio.delete(url, data: payLoad);
+  // Re-check the favourite state of whatever is playing now. Called on every
+  // song change, so next/previous/auto-advance all keep the heart in sync.
+  Future<void> refreshFavouriteStatus() async {
+    isFavourite.value = await isFavouriteSong(
+      Get.find<UseridController>().userId.value,
+      currentPlaying.value.songid.toString(),
+    );
+  }
 
-    if (res.statusCode == 200 && res.data['success'] == true) {
-      if (res.data['is_favorite'] == true) {
-        return true;
-      } else {
-        return false;
-      }
-    } else {
-      return false;
+  // Add or remove the current song, keeping [isFavourite] and the favourites
+  // list in step with what the server actually did.
+  Future<void> toggleFavourite() async {
+    final userid = Get.find<UseridController>().userId.value;
+    final songId = currentPlaying.value.songid.toString();
+
+    final ok = isFavourite.value
+        ? await removeFromFavourite(userid, songId)
+        : await addFavourite(userid, songId);
+
+    if (!ok) return;
+
+    isFavourite.value = !isFavourite.value;
+
+    if (Get.isRegistered<UserFavouriteController>()) {
+      Get.find<UserFavouriteController>().getUserFavourites(userid);
     }
   }
 }

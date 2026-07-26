@@ -26,7 +26,7 @@ class _UserFavouritePageState extends State<UserFavouritePage> {
     controller = Get.find<SongController>();
     favouriteController = Get.find<UserFavouriteController>();
     _useridController = Get.find<UseridController>();
-    favouriteController.getUserFavourites(_useridController.userId.toString());
+    favouriteController.getUserFavourites(_useridController.userId.value);
     super.initState();
   }
 

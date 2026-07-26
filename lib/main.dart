@@ -22,9 +22,10 @@ class MyApp extends StatelessWidget {
         initialBinding: InitialScreenBindings(),
         theme: ThemeData(
             textButtonTheme: TextButtonThemeData(
-                style: ButtonStyle(
-              textStyle: WidgetStatePropertyAll(GoogleFonts.pacifico()),
-            )),
+              style: ButtonStyle(
+                textStyle: WidgetStatePropertyAll(GoogleFonts.pacifico()),
+              ),
+            ),
             textTheme: GoogleFonts.josefinSansTextTheme(),
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
             useMaterial3: true),
