@@ -1,4 +1,4 @@
-String myWebHost = 'https://fluttersubh.fun/';
+String myWebHost = 'https://workwithshubh.online/';
 String myDir = 'music_apis/';
 String baseUrl = "$myWebHost$myDir";
 

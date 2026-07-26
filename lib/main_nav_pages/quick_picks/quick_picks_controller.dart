@@ -9,7 +9,7 @@ class QuickPicksController extends GetxController {
 
   RxList<MySongs> quickpicks = <MySongs>[].obs;
 
-  getQuickPicks() async {
+  Future<void> getQuickPicks() async {
     final response = await dio.get(quickPicksUrl);
     if (response.statusCode == 200) {
       quickpicks.value = Quickpicksresponce.fromRawJson(response.data).data;
