@@ -39,7 +39,7 @@ class _PlayerPageState extends State<PlayerPage>
     controller = Get.find<SongController>();
     services = Get.find<FireStoreServices>();
     _backgroundController.updatePaletteGenerator();
-    controller.refreshFavouriteStatus();
+
     animationController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: animationDurationMilliSeconds),
@@ -139,9 +139,8 @@ class _PlayerPageState extends State<PlayerPage>
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
                             child: CachedNetworkImage(
-                              imageUrl:
-                                  baseUrl +
-                                      controller.currentPlaying.value.coverurl,
+                              imageUrl: baseUrl +
+                                  controller.currentPlaying.value.coverurl,
                               fit: BoxFit.cover,
                               height: 300,
                             ),

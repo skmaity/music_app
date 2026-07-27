@@ -76,9 +76,10 @@ class SongController extends GetxController {
       if (player.playing) {
         await player.stop();
       }
-      currentPlaying.value.clear();
       currentPlaying.value = song;
+      currentPlaying.refresh();
       isPlaying.value = true;
+      refreshFavouriteStatus(song.songid.toString());
 
       final url = baseUrl + song.songurl;
 
@@ -86,7 +87,6 @@ class SongController extends GetxController {
       await player.play();
 
       backgroundController.updatePaletteGenerator();
-      refreshFavouriteStatus();
     } catch (e) {
       debugPrint('Error playing song: $e');
     }
@@ -183,10 +183,10 @@ class SongController extends GetxController {
 
   // Re-check the favourite state of whatever is playing now. Called on every
   // song change, so next/previous/auto-advance all keep the heart in sync.
-  Future<void> refreshFavouriteStatus() async {
+  Future<void> refreshFavouriteStatus(String songId) async {
     isFavourite.value = await isFavouriteSong(
       Get.find<UseridController>().userId.value,
-      currentPlaying.value.songid.toString(),
+      songId,
     );
   }
 
