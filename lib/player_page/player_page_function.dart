@@ -4,14 +4,14 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 
 class PlayerPageFunction extends GetxController {
-  songAddedToFaviorateAlert(context, songTitle) {
+  SnackbarController songAddedToFaviorateAlert(context, songTitle) {
     return Get.snackbar(
       duration: const Duration(seconds: 4),
       icon: const Icon(
         FontAwesome.heart,
         color: Colors.white,
         shadows: [
-          Shadow( 
+          Shadow(
             blurRadius: 9.0,
             color: Colors.white,
             offset: Offset(0, 0),
@@ -21,7 +21,7 @@ class PlayerPageFunction extends GetxController {
 
       reverseAnimationCurve: Curves.decelerate,
       forwardAnimationCurve: Curves.decelerate,
-      borderColor: Colors.white.withOpacity(0.2),
+      borderColor: Colors.white.withValues(alpha: 0.2),
       isDismissible: true,
       margin: const EdgeInsets.symmetric(vertical: 30, horizontal: 10),
       borderWidth: 0.5,
@@ -35,16 +35,17 @@ class PlayerPageFunction extends GetxController {
 
       titleText: Text(
         songTitle,
-        style: const TextStyle(color: Colors.white,fontWeight: FontWeight.bold),
+        style:
+            const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
       ),
     );
   }
 
-  songRemovedFromFaviorateAlert(context, songTitle) {
+  SnackbarController songRemovedFromFaviorateAlert(context, songTitle) {
     return Get.snackbar(
       duration: const Duration(seconds: 4),
       icon: const Icon(
-               FontAwesomeIcons.heartCrack,
+        FontAwesomeIcons.heartCrack,
         color: Colors.white,
         shadows: [
           Shadow(
@@ -57,7 +58,7 @@ class PlayerPageFunction extends GetxController {
 
       reverseAnimationCurve: Curves.decelerate,
       forwardAnimationCurve: Curves.decelerate,
-      borderColor: Colors.white.withOpacity(0.2),
+      borderColor: Colors.white.withValues(alpha: 0.2),
       isDismissible: true,
       margin: const EdgeInsets.symmetric(vertical: 30, horizontal: 10),
       borderWidth: 0.5,

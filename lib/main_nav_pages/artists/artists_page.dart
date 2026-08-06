@@ -1,12 +1,30 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:get/get.dart';
+import 'package:music_app/apis/all_urls.dart';
+import 'package:music_app/const/theme/tokens.dart';
 import 'package:music_app/controller/artist_controller.dart';
 import 'package:music_app/controller/song_controller.dart';
-import 'package:music_app/main_nav_pages/artists/artist_page_change.dart';
+import 'package:music_app/global_widgets/empty_state.dart';
+import 'package:music_app/global_widgets/motion.dart';
+import 'package:music_app/global_widgets/page_header.dart';
+import 'package:music_app/global_widgets/remote_image.dart';
+import 'package:music_app/global_widgets/skeleton.dart';
+import 'package:music_app/global_widgets/song_tile.dart';
+import 'package:music_app/model/artist_model.dart';
 import 'package:music_app/player_page/player_page.dart';
-import 'package:music_app/services/services.dart';
 
-ArtistController _artistController = Get.find<ArtistController>();
+/// Roughly how wide an artist tile wants to be.
+const double _tileTarget = 130;
+
+/// Cell width ÷ height. The circle is `Expanded`, so the name below claims its
+/// height first and the circle takes the rest — a fixed ratio then holds at any
+/// text scale.
+const double _tileRatio = 0.78;
+
+int _columnsFor(double width) => (width / _tileTarget).floor().clamp(2, 6);
 
 class ArtistsPage extends StatefulWidget {
   const ArtistsPage({super.key});
@@ -16,450 +34,323 @@ class ArtistsPage extends StatefulWidget {
 }
 
 class _ArtistsPageState extends State<ArtistsPage> {
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Obx(() => showArtistSongs.value
-            ? const ArtistSongs()
-            : const ArtistsListsPage()));
-  }
-}
-
-class ArtistsListsPage extends StatefulWidget {
-  const ArtistsListsPage({super.key});
-
-  @override
-  State<ArtistsListsPage> createState() => _ArtistsListsPageState();
-}
-
-class _ArtistsListsPageState extends State<ArtistsListsPage> {
-  late FireStoreServices services;
+  late final ArtistController controller;
 
   @override
   void initState() {
-    services = Get.find<FireStoreServices>();
-    services.getArtists();
     super.initState();
+    controller = Get.find<ArtistController>();
+    controller.getArtists();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        backgroundColor: Colors.transparent,
-        body: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.only(left: 10),
-            child: Column(
-              children: [
-                const SizedBox(
-                  height: 10,
+    return Obx(() => controller.selected.value == null
+        ? _ArtistsList(controller: controller)
+        : _ArtistDetail(controller: controller));
+  }
+}
+
+/// Every artist, one shape, one grid.
+///
+/// The old screen gave the first five 130px circles and everyone else 110px
+/// rounded squares — one entity type wearing two shapes, when a circle is
+/// exactly how the whole industry encodes "this is a person". Worse, both bands
+/// were **horizontally-scrolling `ListView`s**, so the "grid" under "More"
+/// scrolled sideways with no affordance, no peek and no indicator, fighting the
+/// vertical scroll the page invites (`design_audit.md` C11).
+class _ArtistsList extends StatelessWidget {
+  const _ArtistsList({required this.controller});
+
+  final ArtistController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        const PageHeader('Artists'),
+        Expanded(
+          child: LayoutBuilder(builder: (context, box) {
+            final columns = _columnsFor(box.maxWidth - Space.gutter * 2);
+            return Obx(() => AnimatedSwitcher(
+                  duration: Motion.normal,
+                  child: _body(context, columns),
+                ));
+          }),
+        ),
+      ],
+    );
+  }
+
+  Widget _body(BuildContext context, int columns) {
+    if (controller.isLoading.value) {
+      return _ArtistsSkeleton(key: const ValueKey('loading'), columns: columns);
+    }
+
+    if (controller.hasError.value) {
+      return ErrorState(
+        key: const ValueKey('error'),
+        message: 'The artist list could not be loaded.',
+        onRetry: controller.getArtists,
+      );
+    }
+
+    if (controller.artists.isEmpty) {
+      return EmptyState(
+        key: const ValueKey('empty'),
+        icon: Icons.person_outline_rounded,
+        headline: 'No artists yet',
+        message: 'Artists appear here once they have songs to show.',
+        actionLabel: 'Reload',
+        onAction: controller.getArtists,
+      );
+    }
+
+    return KeyedSubtree(
+      key: const ValueKey('content'),
+      child: RefreshIndicator(
+        onRefresh: controller.getArtists,
+        child: AnimationLimiter(
+          child: GridView.builder(
+            key: const PageStorageKey('artists'),
+            padding: const EdgeInsets.fromLTRB(
+                Space.gutter, Space.sm, Space.gutter, Space.xl),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              crossAxisSpacing: Space.md,
+              mainAxisSpacing: Space.lg,
+              childAspectRatio: _tileRatio,
+            ),
+            itemCount: controller.artists.length,
+            itemBuilder: (context, index) {
+              final artist = controller.artists[index];
+              return staggeredEntrance(
+                context,
+                index,
+                columnCount: columns,
+                _ArtistTile(
+                  key: ValueKey(artist.id),
+                  artist: artist,
+                  onTap: () => controller.open(artist),
                 ),
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.only(right: 10, top: 40),
-                      child: Text(
-                        'Artists',
-                        style: TextStyle(fontSize: 45, color: Colors.white),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 10,
-                    )
-                  ],
-                ),
-                Obx(
-                  () => SizedBox(
-                    height: MediaQuery.of(context).size.height,
-                    child: ListView.builder(
-                      itemCount: (services.artistsList.length / 5).ceil() + 1,
-                      itemBuilder: (context, index) {
-                        if (index == 0) {
-                          return Column(
-                            children: [
-                              const SizedBox(height: 20),
-                              SizedBox(
-                                height: 180,
-                                child: ListView.builder(
-                                  shrinkWrap: true,
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: services.artistsList.length >= 5
-                                      ? 5
-                                      : services.artistsList.length,
-                                  itemBuilder: (context, index) {
-                                    return Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 2),
-                                      child: Row(
-                                        children: [
-                                          Column(
-                                            children: [
-                                              InkWell(
-                                                borderRadius:
-                                                    BorderRadius.circular(100),
-                                                onTap: () {
-                                                  selectedArtistName.value =
-                                                      services
-                                                          .artistsList[index]
-                                                          .name;
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
 
-                                                  services.getSongsUnderArtists(
-                                                      services
-                                                          .artistsList[index]
-                                                          .id);
-                                                  toggleSongs();
-                                                },
-                                                child: Padding(
-                                                  padding:
-                                                      const EdgeInsets.all(8.0),
-                                                  child: ClipRRect(
-                                                    borderRadius:
-                                                        const BorderRadius.all(
-                                                      Radius.circular(100),
-                                                    ),
-                                                    child: Image(
-                                                      height: 130,
-                                                      width: 130,
-                                                      image: NetworkImage(
-                                                          services
-                                                              .artistsList[
-                                                                  index]
-                                                              .imageUrl),
-                                                      fit: BoxFit.cover,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                              Text(
-                                                services
-                                                    .artistsList[index].name,
-                                                style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 16),
-                                              )
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                              const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 10),
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      'More',
-                                      style: TextStyle(
-                                          color: Colors.white, fontSize: 30),
-                                    ),
-                                    SizedBox(width: 10),
-                                    Expanded(
-                                      child: Image(
-                                        image: AssetImage(
-                                            'assets/vectors/album_line2.png'),
-                                        fit: BoxFit.cover,
-                                      ),
-                                    )
-                                  ],
-                                ),
-                              ),
-                            ],
-                          );
-                        } else {
-                          // Remaining lists: Group remaining items in batches of 5
-                          int startIndex = (index - 1) * 5 + 5;
-                          //  int endIndex = startIndex + 5;
-                          int remainingItems =
-                              services.artistsList.length - startIndex;
+class _ArtistTile extends StatelessWidget {
+  const _ArtistTile({super.key, required this.artist, required this.onTap});
 
-                          if (remainingItems <= 0) {
-                            // Add SizedBox at the end
-                            return const SizedBox(height: 200);
-                          }
+  final Artist artist;
+  final VoidCallback onTap;
 
-                          int itemCount =
-                              remainingItems >= 5 ? 5 : remainingItems;
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 10),
-                              SizedBox(
-                                height: 180,
-                                child: ListView.builder(
-                                  shrinkWrap: true,
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: itemCount,
-                                  itemBuilder: (context, subIndex) {
-                                    int actualIndex = startIndex + subIndex;
-                                    return InkWell(
-                                      borderRadius: BorderRadius.circular(10),
-                                      onTap: () {
-                                        selectedArtistName.value = services
-                                            .artistsList[actualIndex].name;
-                                        services.getSongsUnderArtists(services
-                                            .artistsList[actualIndex].id);
-                                        toggleSongs();
-                                      },
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 10, vertical: 10),
-                                        child: Column(
-                                          children: [
-                                            ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              child: Image(
-                                                image: NetworkImage(services
-                                                    .artistsList[actualIndex]
-                                                    .imageUrl),
-                                                fit: BoxFit.cover,
-                                                width: 110,
-                                                height: 110,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 10),
-                                            SizedBox(
-                                              width: 100,
-                                              child: Text(
-                                                services
-                                                    .artistsList[actualIndex]
-                                                    .name,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 16),
-                                              ),
-                                            ),
-                                            // const SizedBox(height: 2),
-                                            // const SizedBox(
-                                            //   width: 110,
-                                            //   child: Text(
-                                            //     'Arijit Sing,alka yatri,kumar sanu',
-                                            //     style: TextStyle(
-                                            //       color: Colors.white60,
-                                            //       fontSize: 12,
-                                            //     ),
-                                            //     textAlign: TextAlign.center,
-                                            //   ),
-                                            // ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-                      },
-                    ),
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Radii.md),
+        // One node. The tile used to announce the artist twice — once from the
+        // image's own `semanticLabel` and once from the visible name below it.
+        child: Semantics(
+          button: true,
+          excludeSemantics: true,
+          label: artist.name,
+          child: Column(
+            children: [
+              Expanded(
+                child: LayoutBuilder(
+                  builder: (context, box) => RemoteImage(
+                    url: '$baseUrl${artist.imageUrl}',
+                    size: math.min(box.maxWidth, box.maxHeight),
+                    radius: Radii.full,
+                    fallbackIcon: Icons.person_rounded,
                   ),
-                )
-              ],
+                ),
+              ),
+              const SizedBox(height: Space.sm),
+              Text(
+                artist.name,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One artist: who they are, then what they made.
+class _ArtistDetail extends StatelessWidget {
+  const _ArtistDetail({required this.controller});
+
+  final ArtistController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Obx(() {
+      final artist = controller.selected.value;
+      if (artist == null) return const SizedBox.shrink();
+
+      return Column(
+        children: [
+          PageHeader(artist.name, onBack: controller.back),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: Motion.normal,
+              child: _body(context, artist),
             ),
           ),
-        ));
+        ],
+      );
+    });
+  }
+
+  Widget _body(BuildContext context, Artist artist) {
+    if (controller.isLoadingSongs.value) {
+      return const SongListSkeleton(key: ValueKey('loading'));
+    }
+
+    if (controller.hasSongsError.value) {
+      return ErrorState(
+        key: const ValueKey('error'),
+        message: "${artist.name}'s songs could not be loaded.",
+        onRetry: controller.retrySongs,
+      );
+    }
+
+    final song = Get.find<SongController>();
+    final playingId = song.currentPlaying.value.songid;
+
+    return KeyedSubtree(
+      key: const ValueKey('content'),
+      child: AnimationLimiter(
+        child: CustomScrollView(
+          key: PageStorageKey('artist-${artist.id}'),
+          slivers: [
+            SliverToBoxAdapter(
+              child: _ArtistHeader(
+                artist: artist,
+                songCount: controller.songs.length,
+              ),
+            ),
+            if (controller.songs.isEmpty)
+              const SliverToBoxAdapter(
+                child: EmptyState(
+                  headline: 'No songs yet',
+                  message: 'Nothing has been published under this artist.',
+                ),
+              )
+            else
+              SliverList.builder(
+                itemCount: controller.songs.length,
+                itemBuilder: (context, index) {
+                  final track = controller.songs[index];
+                  return staggeredEntrance(
+                    context,
+                    index,
+                    SongTile(
+                      key: ValueKey(track.songid),
+                      song: track,
+                      isPlaying: playingId == track.songid,
+                      onTap: () => playSong(context, track, controller.songs),
+                    ),
+                  );
+                },
+              ),
+            const SliverToBoxAdapter(child: SizedBox(height: Space.xl)),
+          ],
+        ),
+      ),
+    );
   }
 }
 
-class ArtistSongs extends StatefulWidget {
-  const ArtistSongs({super.key});
+/// The artist's image, song count and bio.
+///
+/// Tapping through used to give a bare `PageHeader` with the name and nothing
+/// else — no image, no bio, no count — while the API returned all three.
+class _ArtistHeader extends StatelessWidget {
+  const _ArtistHeader({required this.artist, required this.songCount});
 
-  @override
-  State<ArtistSongs> createState() => _ArtistSongsState();
-}
-
-class _ArtistSongsState extends State<ArtistSongs> {
-  late FireStoreServices services;
-  late SongController controller;
-
-  @override
-  void initState() {
-    services = Get.find<FireStoreServices>();
-    controller = Get.find<SongController>();
-
-    super.initState();
-  }
+  final Artist artist;
+  final int songCount;
 
   @override
   Widget build(BuildContext context) {
-    return Obx(
-      () => Scaffold(
-          backgroundColor: Colors.transparent,
-          body: services.artistsongs.isNotEmpty
-              ? Column(
-                  children: [
-                    const SizedBox(
-                      height: 50,
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const IconButton(
-                            onPressed: toggleSongs,
-                            icon: Icon(
-                                color: Colors.white,
-                                shadows: [
-                                  Shadow(
-                                      blurRadius: 9.0,
-                                      color: Colors.white70,
-                                      offset: Offset(0, 0))
-                                ],
-                                Icons.arrow_back_ios_rounded)),
-                        Padding(
-                          padding: const EdgeInsets.only(right: 20),
-                          child: Text(
-                            services
-                                .artistsongs[
-                                    _artistController.selectedArtistIndex.value]
-                                .artist,
-                            style: const TextStyle(
-                                fontSize: 45, color: Colors.white),
-                          ),
-                        ),
-                      ],
-                    ),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount:
-                            services.artistsongs.length, // Adjusted item count
-                        itemBuilder: (context, index) {
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: ListTile(
-                                contentPadding:
-                                    const EdgeInsets.symmetric(horizontal: 10),
-                                onTap: () {
-                                  controller
-                                      .startPlaying(services.artistsongs[index])
-                                      .then((_) {
-                                    controller.currentPlayingList =
-                                        services.artistsongs;
+    final text = Theme.of(context).textTheme;
+    final bio = artist.bio;
 
-                                    controller.currentIndex.value = index - 1;
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) =>
-                                              const PlayerPage()),
-                                    );
-                                  });
-                                },
-                                tileColor:
-                                    Colors.grey.shade100.withOpacity(0.1),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  side: BorderSide(
-                                    width: 0.5,
-                                    color:
-                                        Colors.grey.shade200.withOpacity(0.4),
-                                  ),
-                                ),
-                                leading: ClipRRect(
-                                  borderRadius: BorderRadius.circular(12),
-                                  child: SizedBox(
-                                    height: 50,
-                                    width: 50,
-                                    child: Image(
-                                      image: NetworkImage(
-                                          services.artistsongs[index].coverurl),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                                title: Text(
-                                  services.artistsongs[index].title,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                  ),
-                                  maxLines: 1,
-                                ),
-                                subtitle: Text(
-                                  services.artistsongs[index].artist,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                  ),
-                                  maxLines: 1,
-                                ),
-                                // trailing: IconButton(
-                                //   onPressed: () {
-                                //     // Additional functionality for trailing icon if needed
-                                //   },
-                                //   icon: const SizedBox(
-                                //     width: 20,
-                                //     child: GlowIcon(
-                                //       Icons.play_arrow_rounded,
-                                //       color: Colors.white,
-                                //     ),
-                                //   ),
-                                // ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                )
-              : Obx(
-                  () => Column(children: [
-                    const SizedBox(
-                      height: 50,
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const IconButton(
-                            onPressed: toggleSongs,
-                            icon: Icon(
-                                color: Colors.white,
-                                shadows: [
-                                  Shadow(
-                                      blurRadius: 9.0,
-                                      color: Colors.white70,
-                                      offset: Offset(0, 0))
-                                ],
-                                Icons.arrow_back_ios_rounded)),
-                        SizedBox(
-                          width: 240,
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 20),
-                            child: Text(
-                              textAlign: TextAlign.end,
-                              overflow: TextOverflow.ellipsis,
-                              selectedArtistName.value,
-                              style: const TextStyle(
-                                  fontSize: 35, color: Colors.white),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Center(
-                            child: Text(
-                              "No Songs found",
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  ]),
-                )),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          Space.gutter, Space.sm, Space.gutter, Space.xl),
+      child: Column(
+        children: [
+          RemoteImage(
+            url: '$baseUrl${artist.imageUrl}',
+            size: Controls.avatar,
+            radius: Radii.full,
+            fallbackIcon: Icons.person_rounded,
+            semanticLabel: artist.name,
+          ),
+          const SizedBox(height: Space.md),
+          Text(
+            songCount == 1 ? '1 song' : '$songCount songs',
+            style: text.labelLarge?.copyWith(color: AppColors.textSecondary),
+          ),
+          if (bio != null && bio.trim().isNotEmpty) ...[
+            const SizedBox(height: Space.md),
+            Text(
+              bio,
+              textAlign: TextAlign.center,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+              style: text.bodyMedium?.copyWith(color: AppColors.textSecondary),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ArtistsSkeleton extends StatelessWidget {
+  const _ArtistsSkeleton({super.key, required this.columns});
+
+  final int columns;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(
+          Space.gutter, Space.sm, Space.gutter, Space.xl),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        crossAxisSpacing: Space.md,
+        mainAxisSpacing: Space.lg,
+        childAspectRatio: _tileRatio,
+      ),
+      itemCount: columns * 3,
+      itemBuilder: (context, _) => Column(
+        children: [
+          const Expanded(child: Skeleton(radius: Radii.full)),
+          const SizedBox(height: Space.sm),
+          FractionallySizedBox(
+            widthFactor: 0.7,
+            child: const Skeleton(height: Space.md, radius: Radii.sm),
+          ),
+        ],
+      ),
     );
   }
 }

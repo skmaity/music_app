@@ -3,7 +3,6 @@ class ArtistDocid {
 
   ArtistDocid({
     required this.docId,
-
   });
 
   // Factory constructor to create an Artist from a JSON map

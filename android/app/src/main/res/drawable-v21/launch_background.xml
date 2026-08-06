@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="?android:colorBackground" />
+<!--
+  The launch screen, API 21+ — the one virtually every device actually uses.
 
-    <!-- You can insert your own image assets here -->
-    <!-- <item>
+  See the pre-v21 sibling for why `?android:colorBackground` had to go: it
+  resolves to white under the light `LaunchTheme`, which is what made a
+  dark-only app open with a white flash.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/brand_black" />
+
+    <item>
         <bitmap
             android:gravity="center"
             android:src="@mipmap/launch_image" />
-    </item> -->
+    </item>
 </layer-list>

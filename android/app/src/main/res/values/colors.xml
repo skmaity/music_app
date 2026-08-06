@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The logo's own field colour, sampled from the master artwork rather
+         than guessed. It is also the app's first frame: the Flutter theme
+         sets `scaffoldBackgroundColor: Colors.black`, so anything lighter
+         here shows as a flash between the launch screen and the first
+         painted frame. -->
+    <color name="brand_black">#06060A</color>
+
+    <!-- The adaptive icon's background layer. -->
+    <color name="ic_launcher_background">@color/brand_black</color>
+</resources>

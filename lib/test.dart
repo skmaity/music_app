@@ -41,7 +41,8 @@ class _MyAppState extends State<MyApp> {
     super.initState();
   }
 
-  String imageurl = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaVKy63Q28LPrnZBlRvBKIG_9Z_rkiXjbJhg&s';
+  String imageurl =
+      'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQaVKy63Q28LPrnZBlRvBKIG_9Z_rkiXjbJhg&s';
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +91,7 @@ class _ImageColorsState extends State<ImageColors> {
     super.initState();
     _updatePaletteGenerator();
   }
- 
+
   Future<void> _updatePaletteGenerator() async {
     paletteGenerator = await PaletteGenerator.fromImageProvider(
       widget.image,
@@ -149,14 +150,19 @@ class PaletteSwatches extends StatelessWidget {
         // Wrap(
         //   children: swatches,
         // ),
-        Container(height: 30.0), 
-        PaletteSwatch(label: 'Dominant', color: paletteGen.dominantColor?.color),
-        PaletteSwatch(label: 'Light Vibrant', color: paletteGen.lightVibrantColor?.color),
+        Container(height: 30.0),
+        PaletteSwatch(
+            label: 'Dominant', color: paletteGen.dominantColor?.color),
+        PaletteSwatch(
+            label: 'Light Vibrant', color: paletteGen.lightVibrantColor?.color),
         PaletteSwatch(label: 'Vibrant', color: paletteGen.vibrantColor?.color),
-        PaletteSwatch(label: 'Dark Vibrant', color: paletteGen.darkVibrantColor?.color),
-        PaletteSwatch(label: 'Light Muted', color: paletteGen.lightMutedColor?.color),
+        PaletteSwatch(
+            label: 'Dark Vibrant', color: paletteGen.darkVibrantColor?.color),
+        PaletteSwatch(
+            label: 'Light Muted', color: paletteGen.lightMutedColor?.color),
         PaletteSwatch(label: 'Muted', color: paletteGen.mutedColor?.color),
-        PaletteSwatch(label: 'Dark Muted', color: paletteGen.darkMutedColor?.color),
+        PaletteSwatch(
+            label: 'Dark Muted', color: paletteGen.darkMutedColor?.color),
       ],
     );
   }

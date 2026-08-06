@@ -1,12 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@android:color/white" />
+<!--
+  The launch screen, pre-API-21.
 
-    <!-- You can insert your own image assets here -->
-    <!-- <item>
+  This was `@android:color/white`, and its v21 sibling was
+  `?android:colorBackground` under a `Theme.Light` parent — which resolves to
+  white on any phone whose system theme is light. The app is dark-only by
+  design (doc/design.md: "no light theme"), so every cold start on a
+  light-mode phone flashed a full white screen and then cut to black. Both
+  variants are the brand's own black now, in both the default and night
+  resource sets, because there is no configuration in which this app is light.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/brand_black" />
+
+    <item>
         <bitmap
             android:gravity="center"
             android:src="@mipmap/launch_image" />
-    </item> -->
+    </item>
 </layer-list>

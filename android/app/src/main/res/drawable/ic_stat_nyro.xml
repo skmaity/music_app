@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The status-bar icon for the playback notification.
+
+  This is NOT the launcher icon and cannot be. Android treats a notification's
+  small icon as an alpha mask: it discards every colour channel and keeps only
+  the alpha, then tints the result. Handing it @mipmap/ic_launcher — the
+  default `androidNotificationIcon` in JustAudioBackground.init — produces a
+  solid grey square, because the launcher icon is opaque edge to edge.
+
+  So: the N-note mark redrawn as a white-on-transparent silhouette, simplified
+  for the size it is actually seen at. The mark's stem flag is dropped
+  deliberately; at the ~18dp a status bar renders this at, it is two pixels of
+  noise rather than a detail anyone reads.
+
+  Referenced from main.dart as 'drawable/ic_stat_nyro'.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- The N: left stem, diagonal, right stem. Round caps and joins match the
+         mark's own stroke language. -->
+    <path
+        android:pathData="M6.5,19 V6 L15.8,14.5 M15.8,6 V14.6"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- The note head, hung off the foot of the right stem. Filled rather than
+         stroked: at this size a stroked ring closes up into a blob anyway, so
+         the ring would only cost contrast. -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M13.3,16.6 m-2.5,0 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0" />
+</vector>

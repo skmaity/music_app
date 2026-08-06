@@ -41,3 +41,13 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Release signing. These are the keys that identify Nyro to Google for the
+# life of the app — committing them lets anyone forge an update. key.properties
+# holds their passwords; the .jks is the key itself.
+#
+# The .jks must still be backed up somewhere safe and private. Losing it means
+# never being able to update the Play Store listing again, under any account.
+**/key.properties
+*.jks
+*.keystore

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The launch theme on Android 12+, which is where the splash actually comes
+      from on any current device.
+
+      Without this file the platform ignores `windowBackground` entirely and
+      synthesises a splash from the launcher icon instead: it takes the adaptive
+      icon's foreground, authored on a 108dp canvas, and redraws it at 240dp.
+      That 2.2x upscale of a bitmap was what made the logo look pixelated on
+      launch, and no amount of re-exporting the mipmaps could have fixed it,
+      because the mipmaps were never the size being drawn.
+
+      `splash_icon` is a VectorDrawable for that reason - it has no resolution
+      to run out of, whatever size the platform decides to draw it at.
+
+      Note this theme deliberately does NOT parent Theme.Light, for the same
+      reason values/styles.xml doesn't: the app is dark-only (doc/design.md),
+      so a light system setting must not hand it a light window.
+    -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowSplashScreenBackground">@color/brand_black</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <!--
+          After the system splash dismisses, this is the window behind Flutter
+          until it paints. Plain black rather than @drawable/launch_background:
+          the system splash has just shown the mark, so drawing it a second time
+          here would pop it back on screen for a frame.
+        -->
+        <item name="android:windowBackground">@color/brand_black</item>
+    </style>
+
+    <style name="NormalTheme" parent="@android:style/Theme.Black.NoTitleBar">
+        <item name="android:windowBackground">@color/brand_black</item>
+    </style>
+</resources>

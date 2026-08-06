@@ -1,0 +1,16 @@
+# Copy to `android/key.properties` and fill in. That file is gitignored —
+# it holds the passwords to the key that identifies Nyro to Google forever.
+#
+# Generate the keystore first (see doc/release.md):
+#
+#   keytool -genkey -v -keystore nyro-release.jks \
+#     -keyalg RSA -keysize 2048 -validity 10000 -alias nyro
+#
+# storeFile is resolved relative to the `android/` directory, so a keystore at
+# android/nyro-release.jks is just its filename. Keeping it outside the repo
+# entirely and using an absolute path here is safer still.
+
+storePassword=
+keyPassword=
+keyAlias=nyro
+storeFile=nyro-release.jks
