@@ -43,15 +43,12 @@ abstract final class AppTheme {
         titleTextStyle: text.titleLarge,
       ),
 
-      // The nav rail is built from TextButton.icon, so this is what puts the
-      // rail labels in Pacifico while the rest of the app is Josefin Sans.
-      // The tracking and line-height are the legibility fix: the labels are
-      // rotated 90 degrees, which a script face makes harder to read than it
-      // needs to be.
+      // Navigation is functional copy, so keep it in the app's UI family.
+      // The old Pacifico override made already-rotated labels harder to scan.
       textButtonTheme: TextButtonThemeData(
         style: ButtonStyle(
           textStyle: WidgetStatePropertyAll(
-            GoogleFonts.pacifico(fontSize: 16, height: 1.2, letterSpacing: 0.4),
+            text.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
           overlayColor: WidgetStatePropertyAll(
             Colors.white.withValues(alpha: 0.08),
