@@ -20,7 +20,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.0.0+1
+version: 1.0.1+2
 
 environment:
   sdk: ^3.5.3
@@ -66,10 +66,14 @@ dependencies:
   just_audio: ^0.10.3
   just_audio_background: ^0.0.1-beta.17
   flutter_cache_manager: ^3.4.2
+  youtube_explode_dart: ^3.1.0
 
 dev_dependencies:
-  flutter_test: 
+  flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
+
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -91,10 +95,8 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    - assets/
-    - assets/vectors/
-    - assets/lottie_animations/
-    - assets/icons/
+    - assets/lottie_animations/musics_floating.json
+    - assets/nyro_logo.png
 
 
 

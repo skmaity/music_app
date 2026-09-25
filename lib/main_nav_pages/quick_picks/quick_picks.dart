@@ -416,38 +416,36 @@ class _GridPick extends StatelessWidget {
               // Expanded, so the type below claims its height first and the
               // artwork takes what is left. A fixed cell ratio then holds at
               // any text scale.
-              Expanded(
-                child: LayoutBuilder(
-                  builder: (context, box) {
-                    final side = math.min(box.maxWidth, box.maxHeight);
-                    return Stack(
-                      children: [
-                        RemoteImage(
-                          url: '$baseUrl${song.coverurl}',
-                          size: side,
-                          radius: Radii.md,
-                        ),
-                        // The marker needs ground for the same reason the
-                        // hero's title does — a cover can be anything.
-                        if (isPlaying) ...[
-                          Positioned.fill(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(Radii.md),
-                              child: const DecoratedBox(
-                                decoration: BoxDecoration(gradient: kArtScrim),
-                              ),
+              LayoutBuilder(
+                builder: (context, box) {
+                  final side = math.min(box.maxWidth, box.maxHeight);
+                  return Stack(
+                    children: [
+                      RemoteImage(
+                        url: '$baseUrl${song.coverurl}',
+                        size: side,
+                        radius: Radii.md,
+                      ),
+                      // The marker needs ground for the same reason the
+                      // hero's title does — a cover can be anything.
+                      if (isPlaying) ...[
+                        Positioned.fill(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(Radii.md),
+                            child: const DecoratedBox(
+                              decoration: BoxDecoration(gradient: kArtScrim),
                             ),
                           ),
-                          const Positioned(
-                            right: Space.xs,
-                            bottom: Space.xs,
-                            child: NowPlayingMarker(),
-                          ),
-                        ],
+                        ),
+                        const Positioned(
+                          right: Space.xs,
+                          bottom: Space.xs,
+                          child: NowPlayingMarker(),
+                        ),
                       ],
-                    );
-                  },
-                ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: Space.sm),
               Text(

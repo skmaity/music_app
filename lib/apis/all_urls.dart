@@ -36,6 +36,12 @@ String checkIfFavouriteUrl = "${baseUrl}check_if_favourite.php";
 String getAllUserFavoiritesUrl = "${baseUrl}get_user_favourites.php";
 String allArtistsUrl = "${baseUrl}get_all_artists.php";
 
+/// "This install opened the app", posted once per launch by [UseridController]
+/// with the per-install uuid and nothing else. Feeds the admin panel's
+/// listener count. Fire-and-forget: nothing in the app reads the response, and
+/// a failure here must never be visible to the user.
+String trackUserUrl = "${baseUrl}track_user.php";
+
 /// Takes `?artist_id=<int>`. Unlike every other endpoint, it returns `artist`
 /// and `songs` at the **top level** rather than under `data`.
 String artistDetailsUrl = "${baseUrl}get_artist_details.php";

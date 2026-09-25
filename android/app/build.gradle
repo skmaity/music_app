@@ -4,16 +4,15 @@ plugins {
     id "dev.flutter.flutter-gradle-plugin"
 }
 
-// Release signing credentials, kept out of the repo.
+// Optional Play Store signing credentials, kept out of the repo.
 //
 // `android/key.properties` is gitignored and holds the keystore password, the
 // key password, the alias and the path to the .jks. See key.properties.example
 // for the shape of it and README-release.md for how to generate the keystore.
 //
-// Absent, `signingConfigs.release` below is left unconfigured and a release
-// build fails loudly rather than quietly producing an unsigned or debug-signed
-// artifact — which is exactly the failure that is easy to miss until the Play
-// Console rejects the upload.
+// Direct APK releases keep the existing debug certificate so users can install
+// updates over the APK already shared from this project. Switch the build type
+// below to `signingConfigs.release` before the first Play Store distribution.
 def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file("key.properties")
 if (keystorePropertiesFile.exists()) {
@@ -66,22 +65,30 @@ android {
 
     buildTypes {
         release {
-            // Was `signingConfigs.debug`, which the Play Console rejects on
-            // upload — debug keys are public, so an app signed with them is an
-            // app anyone can forge an update for.
+            // Direct sharing only: keep the same certificate as earlier APKs.
             signingConfig = signingConfigs.debug
 
-            // Deliberately NOT setting minifyEnabled/shrinkResources.
+
+            // minifyEnabled/shrinkResources are not set here — but do NOT read
+            // that as "release builds are not shrunk". They are.
             //
-            // Flutter already AOT-compiles and tree-shakes the Dart half,
-            // which is nearly all of this app; R8 would only shrink the thin
-            // Java/Kotlin plugin layer. That is a small win against a real
-            // risk — a missing keep-rule shows up as a crash in release builds
-            // only, and a release build cannot be run until the keystore
-            // exists. Not something to switch on the day of a first upload.
+            // Flutter's own Gradle plugin forces both on for this build type:
+            // FlutterPlugin.kt's `shouldShrinkResources` branch sets
+            // `isMinifyEnabled = true` and `isShrinkResources = true` on
+            // `release`, and adds proguard-android-optimize.txt plus Flutter's
+            // own keep rules. Leaving them unset here changes nothing.
             //
-            // Worth revisiting afterwards, with a proguard-rules.pro and a
-            // release build actually exercised on a device first.
+            // The consequence to remember: anything reachable only from Dart is
+            // invisible to the shrinker. R8's "safe" mode finds resource names
+            // in Java/Kotlin string constants, but a name that lives in the AOT
+            // snapshot in libapp.so does not exist as far as it is concerned.
+            // That stripped drawable/ic_stat_nyro — named only by
+            // JustAudioBackground.init in lib/main.dart — and killed the app on
+            // the first track played, in release builds only. See
+            // src/main/res/raw/keep.xml; new Dart-named resources go in there.
+            //
+            // To opt out instead, set `minifyEnabled false` and
+            // `shrinkResources false` explicitly — unset does not mean off.
         }
     }
 }

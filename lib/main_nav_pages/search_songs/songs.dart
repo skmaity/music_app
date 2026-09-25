@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +11,9 @@ import 'package:music_app/global_widgets/page_header.dart';
 import 'package:music_app/global_widgets/skeleton.dart';
 import 'package:music_app/global_widgets/song_tile.dart';
 import 'package:music_app/main_nav_pages/search_songs/controllers/search_song_controller.dart';
+import 'package:music_app/model/song_model.dart';
 import 'package:music_app/player_page/player_page.dart';
+import 'package:music_app/services/youtube_source.dart';
 
 class SearchSongs extends StatefulWidget {
   const SearchSongs({super.key});
@@ -27,6 +31,8 @@ class _SearchSongsState extends State<SearchSongs> {
   final SearchSongController controller = Get.find<SearchSongController>();
   final SongController songController = Get.find<SongController>();
   final FocusNode focus = FocusNode();
+  final LatestRequest _playbackRequests = LatestRequest();
+  bool _resolving = false;
 
   @override
   void initState() {
@@ -40,6 +46,7 @@ class _SearchSongsState extends State<SearchSongs> {
 
   @override
   void dispose() {
+    _playbackRequests.next();
     songQuery.dispose();
     focus.dispose();
     super.dispose();
@@ -50,6 +57,38 @@ class _SearchSongsState extends State<SearchSongs> {
     return Column(
       children: [
         const PageHeader('Songs'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Space.gutter),
+          child: Obx(() => SegmentedButton<SearchSource>(
+                segments: const [
+                  ButtonSegment(
+                    value: SearchSource.catalogue,
+                    label: Text('Catalogue'),
+                  ),
+                  ButtonSegment(
+                    value: SearchSource.youtube,
+                    label: Text('YouTube'),
+                  ),
+                ],
+                selected: {controller.selectedSource.value},
+                onSelectionChanged: (value) {
+                  _playbackRequests.next();
+                  setState(() => _resolving = false);
+                  songQuery.clear();
+                  controller.selectSource(value.single);
+                },
+              )),
+        ),
+        const SizedBox(height: Space.md),
+        Obx(() => controller.selectedSource.value == SearchSource.youtube
+            ? const Padding(
+                padding: EdgeInsets.symmetric(horizontal: Space.gutter),
+                child: Text(
+                    'Experimental YouTube search · one track at a time. '
+                    'Saved tracks and YouTube queues are not available yet.'),
+              )
+            : const SizedBox.shrink()),
+        if (_resolving) const LinearProgressIndicator(),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: Space.gutter),
           // Rebuilds only the field, and only so the clear button can appear
@@ -140,9 +179,11 @@ class _SearchSongsState extends State<SearchSongs> {
       final isDefault = controller.isShowingDefault;
       return ErrorState(
         key: const ValueKey('error'),
-        message: isDefault
-            ? 'Your songs could not be loaded.'
-            : 'The search could not be completed.',
+        message: controller.errorMessage.value.isNotEmpty
+            ? controller.errorMessage.value
+            : isDefault
+                ? 'Your songs could not be loaded.'
+                : 'The search could not be completed.',
         // Branches for the same reason `_refresh` does: retrying a failed
         // default-list load by calling `searchSong('')` — what this used to
         // do unconditionally — asks the server for an empty query instead of
@@ -155,6 +196,14 @@ class _SearchSongsState extends State<SearchSongs> {
 
     if (controller.searchSongResult.isEmpty) {
       final isDefault = controller.isShowingDefault;
+      if (isDefault &&
+          controller.selectedSource.value == SearchSource.youtube) {
+        return const EmptyState(
+            icon: Icons.search_rounded,
+            headline: 'Search YouTube',
+            message:
+                'Enter a title or artist to find public videos and music.');
+      }
       return EmptyState(
         key: ValueKey(isDefault ? 'empty-default' : 'empty-search'),
         icon: isDefault ? Icons.music_off_rounded : Icons.search_off_rounded,
@@ -170,7 +219,7 @@ class _SearchSongsState extends State<SearchSongs> {
       );
     }
 
-    final playingId = songController.currentPlaying.value.songid;
+    final playingIdentity = songController.currentPlaying.value.identity;
 
     return KeyedSubtree(
       key: const ValueKey('content'),
@@ -191,16 +240,52 @@ class _SearchSongsState extends State<SearchSongs> {
                 context,
                 index,
                 SongTile(
-                  key: ValueKey(searchSong.songid),
+                  key: ValueKey(searchSong.identity),
                   song: searchSong,
-                  isPlaying: playingId == searchSong.songid,
-                  onTap: () {
+                  isPlaying: playingIdentity == searchSong.identity,
+                  onTap: () async {
                     // There was a hardcoded 400ms delay here, waiting on
                     // nothing: 400ms of unexplained latency on this
                     // screen's primary action. Dismissing the keyboard
                     // does not need to be awaited.
                     focus.unfocus();
-                    playSong(context, searchSong, controller.searchSongResult);
+                    final request = _playbackRequests.next();
+                    if (searchSong.source == SongSource.youtube) {
+                      setState(() => _resolving = true);
+                      try {
+                        final resolved =
+                            await controller.youtube.resolve(searchSong);
+                        if (!context.mounted ||
+                            !_playbackRequests.owns(request)) {
+                          resolved.streamHandle?.close();
+                          return;
+                        }
+                        playSong(context, resolved, <MySongs>[resolved].obs);
+                      } on TimeoutException {
+                        if (context.mounted &&
+                            _playbackRequests.owns(request)) {
+                          _showPlaybackError(
+                            context,
+                            'YouTube took too long to provide this audio.',
+                          );
+                        }
+                      } on YouTubeSourceException catch (e) {
+                        if (context.mounted &&
+                            _playbackRequests.owns(request)) {
+                          _showPlaybackError(context, e.message);
+                        }
+                      } finally {
+                        if (mounted && _playbackRequests.owns(request)) {
+                          setState(() => _resolving = false);
+                        }
+                      }
+                    } else {
+                      playSong(
+                        context,
+                        searchSong,
+                        controller.searchSongResult,
+                      );
+                    }
                   },
                 ),
               );
@@ -209,5 +294,11 @@ class _SearchSongsState extends State<SearchSongs> {
         ),
       ),
     );
+  }
+
+  void _showPlaybackError(BuildContext context, String message) {
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }

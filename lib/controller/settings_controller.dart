@@ -30,7 +30,7 @@ const String kAppName = 'Nyro';
 /// adding a dependency for this. Hand-kept in step with pubspec.yaml's
 /// `version:` field instead — update this string whenever that line changes;
 /// nothing checks that the two agree.
-const String kAppVersion = '1.0.0+1';
+const String kAppVersion = '1.0.1+2';
 
 /// Every user-facing setting the app has, persisted to `shared_preferences`
 /// and exposed as observables so the rest of the app reacts through `Obx`.

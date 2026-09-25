@@ -63,7 +63,7 @@ class SongTile extends StatelessWidget {
             borderRadius: BorderRadius.circular(Radii.sm),
           ),
           leading: RemoteImage(
-            url: '$baseUrl${song.coverurl}',
+            url: song.artworkUri(baseUrl).toString(),
             size: Controls.thumbRow,
             semanticLabel: 'Cover art for ${song.title}',
           ),
@@ -73,7 +73,7 @@ class SongTile extends StatelessWidget {
           title: Text(
             song.title,
             style: text.bodyLarge,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
           subtitle: Text(

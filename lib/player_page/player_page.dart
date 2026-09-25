@@ -367,7 +367,7 @@ class _PlayerPageState extends State<PlayerPage>
                   boxShadow: kArtShadow,
                 ),
                 child: RemoteImage(
-                  url: baseUrl + song.coverurl,
+                  url: song.artworkUri(baseUrl).toString(),
                   size: side,
                   radius: Radii.md,
                   semanticLabel: 'Cover art for ${song.title}',

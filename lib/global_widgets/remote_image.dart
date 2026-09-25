@@ -14,14 +14,12 @@ class RemoteImage extends StatelessWidget {
     required this.url,
     required this.size,
     this.radius = 12,
-    this.fallbackIcon = Icons.music_note_rounded,
     this.semanticLabel,
   });
 
   final String url;
   final double size;
   final double radius;
-  final IconData fallbackIcon;
   final String? semanticLabel;
 
   @override
@@ -46,10 +44,12 @@ class RemoteImage extends StatelessWidget {
             // on any of them, reading as dirt on the screen rather than as
             // loading.
             placeholder: (_, __) => Skeleton(radius: radius),
-            errorWidget: (_, __, ___) => _placeholder(
-              Icon(fallbackIcon,
-                  color: AppColors.textSecondary, size: size * 0.4),
-            ),
+            errorWidget: (_, __, ___) => _placeholder(Image.asset(
+              'assets/nyro_logo.png',
+              width: size * 0.62,
+              height: size * 0.62,
+              fit: BoxFit.contain,
+            )),
           ),
         ),
       ),

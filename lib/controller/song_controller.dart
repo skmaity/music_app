@@ -12,6 +12,7 @@ import 'package:music_app/controller/userid_controller.dart';
 import 'package:music_app/main_nav_pages/user_favourite_songs/controller/user_favourite_controller.dart';
 import 'package:music_app/model/repeat_mode.dart';
 import 'package:music_app/model/song_model.dart';
+import 'package:music_app/services/youtube_audio_source.dart';
 
 /// The player, the queue, and everything hanging off "what is playing".
 ///
@@ -77,7 +78,8 @@ class SongController extends GetxController {
   /// every such edit as a track change and refetch the favourite state, rebuild
   /// the palette, and — with autoplay off — pause the music the user was in the
   /// middle of.
-  int? _lastSongId;
+  String? _lastSongIdentity;
+  int? _lastBackendSongId;
 
   // ---------------------------------------------------------------------
   // Audio sources
@@ -89,16 +91,21 @@ class SongController extends GetxController {
   /// The [MediaItem] tag is the whole point. `just_audio` only needs the uri;
   /// everything the card shows (title, artist, artwork) reaches it through
   /// this tag and nowhere else.
-  AudioSource _sourceFor(MySongs song) => AudioSource.uri(
-        Uri.parse(baseUrl + song.songurl),
-        tag: MediaItem(
-          // Must be unique across the queue — the media session keys off it.
-          id: song.songid.toString(),
-          title: song.title,
-          artist: song.artist,
-          artUri: Uri.parse(baseUrl + song.coverurl),
-        ),
-      );
+  AudioSource _sourceFor(MySongs song) {
+    final tag = MediaItem(
+        id: song.identity,
+        title: song.title,
+        artist: song.artist,
+        artUri: song.artworkUri(baseUrl));
+    if (!song.isBackend) {
+      final handle = song.streamHandle;
+      if (handle == null) {
+        throw StateError('YouTube track has no resolved stream handle.');
+      }
+      return YouTubeAudioSource(handle: handle, tag: tag);
+    }
+    return AudioSource.uri(song.mediaUri(baseUrl), tag: tag);
+  }
 
   // ---------------------------------------------------------------------
   // Shuffle
@@ -207,6 +214,7 @@ class SongController extends GetxController {
 
         final settings = Get.find<SettingsController>();
         if (settings.rememberPositionEnabled.value &&
+            currentPlaying.value.isBackend &&
             currentPlaying.value.songid != 0) {
           settings.clearLastPosition(currentPlaying.value.songid);
         }
@@ -243,12 +251,14 @@ class SongController extends GetxController {
       // the playing track shifts its index, and next/previous walk from it.
       currentIndex.value = index;
 
-      final previousId = _lastSongId;
-      if (song.songid == previousId) return;
+      final previousIdentity = _lastSongIdentity;
+      final previousBackendId = _lastBackendSongId;
+      if (song.identity == previousIdentity) return;
 
       final autoAdvanced = !_userSkip;
       _userSkip = false;
-      _lastSongId = song.songid;
+      _lastSongIdentity = song.identity;
+      _lastBackendSongId = song.isBackend ? song.songid : null;
 
       final settings = Get.find<SettingsController>();
 
@@ -256,16 +266,21 @@ class SongController extends GetxController {
       // resume — leaving its saved position on disk would seek an already
       // finished song back into itself the next time it is opened. A manual
       // skip is different: that position is worth keeping.
-      if (previousId != null &&
+      if (previousIdentity != null &&
           autoAdvanced &&
-          settings.rememberPositionEnabled.value) {
-        settings.clearLastPosition(previousId);
+          settings.rememberPositionEnabled.value &&
+          previousBackendId != null) {
+        settings.clearLastPosition(previousBackendId);
       }
 
       currentPlaying.value = song;
       currentPlaying.refresh();
 
-      refreshFavouriteStatus(song.songid.toString());
+      if (song.isBackend) {
+        refreshFavouriteStatus(song.songid.toString());
+      } else {
+        isFavourite.value = false;
+      }
       Get.find<BackgroundController>().updatePaletteGenerator();
 
       // Here rather than in `playQueue`, so it catches every way a track can
@@ -314,12 +329,23 @@ class SongController extends GetxController {
     // not have run recently — this is the last moment [currentPosition] still
     // describes the song that was playing rather than the one about to start.
     if (settings.rememberPositionEnabled.value &&
+        currentPlaying.value.isBackend &&
         currentPlaying.value.songid != 0) {
       await settings.saveLastPosition(
           currentPlaying.value.songid, currentPosition.value);
     }
 
     final song = songs[start];
+    final outgoingHandles = <SongStreamHandle>{
+      for (final queued in currentPlayingList)
+        if (queued.streamHandle != null) queued.streamHandle!,
+      if (currentPlaying.value.streamHandle != null)
+        currentPlaying.value.streamHandle!,
+    };
+    final incomingHandles = <SongStreamHandle>{
+      for (final queued in songs)
+        if (queued.streamHandle != null) queued.streamHandle!,
+    };
 
     // Set synchronously as well as in the stream listener. The listener is the
     // authority, but `setAudioSources` has to load before it fires, and the
@@ -336,7 +362,7 @@ class SongController extends GetxController {
     // at full opacity: a black screen that no later song change could clear.
     Get.find<BackgroundController>().updatePaletteGenerator();
 
-    final resume = settings.rememberPositionEnabled.value
+    final resume = settings.rememberPositionEnabled.value && song.isBackend
         ? settings.getLastPosition(song.songid)
         : null;
 
@@ -348,6 +374,9 @@ class SongController extends GetxController {
         initialIndex: start,
         initialPosition: resume ?? Duration.zero,
       );
+      for (final handle in outgoingHandles.difference(incomingHandles)) {
+        handle.close();
+      }
 
       // Applied once per queue rather than once per track. With a playlist the
       // speed survives a track change by itself, so the old per-track reapply
@@ -445,6 +474,7 @@ class SongController extends GetxController {
     // — don't wait for the next throttled tick in positionStream below.
     final settings = Get.find<SettingsController>();
     if (settings.rememberPositionEnabled.value &&
+        currentPlaying.value.isBackend &&
         currentPlaying.value.songid != 0) {
       await settings.saveLastPosition(
           currentPlaying.value.songid, currentPosition.value);
@@ -647,6 +677,10 @@ class SongController extends GetxController {
   /// instead. Both entry points below do; a control that silently does nothing
   /// on an empty queue is worse than one that does the obvious thing.
   Future<void> playNext(MySongs song) async {
+    if (!song.isBackend) {
+      throw UnsupportedError(
+          'YouTube queueing is not available in this preview.');
+    }
     if (currentPlayingList.isEmpty) return playQueue([song], 0);
 
     final at = (currentIndex.value + 1).clamp(0, currentPlayingList.length);
@@ -659,6 +693,10 @@ class SongController extends GetxController {
 
   /// Appends [song] to the end of the queue.
   Future<void> addToQueue(MySongs song) async {
+    if (!song.isBackend) {
+      throw UnsupportedError(
+          'YouTube queueing is not available in this preview.');
+    }
     if (currentPlayingList.isEmpty) return playQueue([song], 0);
 
     currentPlayingList.add(song);
@@ -720,7 +758,8 @@ class SongController extends GetxController {
 
     if (currentPlayingList.isEmpty) {
       currentIndex.value = -1;
-      _lastSongId = null;
+      _lastSongIdentity = null;
+      _lastBackendSongId = null;
     }
 
     _guardPlayerCall(
@@ -779,6 +818,9 @@ class SongController extends GetxController {
   /// used to return void and swallow every failure, so a rejected write looked
   /// exactly like a tap that had not registered.
   Future<String?> toggleFavourite() async {
+    if (!currentPlaying.value.isBackend) {
+      return 'YouTube tracks cannot be saved to server favourites.';
+    }
     if (_toggling) return null;
     _toggling = true;
     try {
@@ -837,6 +879,14 @@ class SongController extends GetxController {
     // Otherwise a timer armed on this page outlives the controller and fires
     // into a disposed player once GetX tears this down.
     _sleepTicker?.cancel();
+    for (final handle in <SongStreamHandle>{
+      for (final song in currentPlayingList)
+        if (song.streamHandle != null) song.streamHandle!,
+      if (currentPlaying.value.streamHandle != null)
+        currentPlaying.value.streamHandle!,
+    }) {
+      handle.close();
+    }
     // The only place the player is ever disposed. See _guardPlayerCall.
     player.dispose();
     super.onClose();

@@ -43,15 +43,18 @@ abstract final class AppTheme {
         titleTextStyle: text.titleLarge,
       ),
 
-      // The nav rail is built from TextButton.icon, so this is what puts the
-      // rail labels in Pacifico while the rest of the app is Josefin Sans.
+      // The nav rail is built from TextButton.icon, so its compact label
+      // metrics live here rather than in each button.
       // The tracking and line-height are the legibility fix: the labels are
-      // rotated 90 degrees, which a script face makes harder to read than it
-      // needs to be.
+      // rotated 90 degrees, so it needs a little extra tracking.
       textButtonTheme: TextButtonThemeData(
         style: ButtonStyle(
           textStyle: WidgetStatePropertyAll(
-            GoogleFonts.pacifico(fontSize: 16, height: 1.2, letterSpacing: 0.4),
+            GoogleFonts.varelaRound(
+                fontSize: 16,
+                height: 1.2,
+                letterSpacing: 0.8,
+                fontWeight: FontWeight.w800),
           ),
           overlayColor: WidgetStatePropertyAll(
             Colors.white.withValues(alpha: 0.08),
@@ -60,10 +63,10 @@ abstract final class AppTheme {
       ),
 
       // The app's one button. `textButtonTheme` below is spoken for — it is
-      // what puts the nav rail in Pacifico — so anything that needs to read as
+      // what styles the nav rail — so anything that needs to read as
       // a button uses this: a white pill, the same language as the player's
       // primary control. No `textStyle` here on purpose; M3 takes it from
-      // `textTheme.labelLarge`, which already carries Josefin Sans.
+      // `textTheme.labelLarge`, which already carries Outfit.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.textPrimary,
@@ -115,8 +118,7 @@ abstract final class AppTheme {
               ? AppColors.textPrimary
               : AppColors.glass1,
         ),
-        trackOutlineColor:
-            const WidgetStatePropertyAll(AppColors.glassEdge),
+        trackOutlineColor: const WidgetStatePropertyAll(AppColors.glassEdge),
       ),
 
       inputDecorationTheme: InputDecorationTheme(
@@ -167,11 +169,11 @@ abstract final class AppTheme {
     onError: Colors.black,
   );
 
-  /// Josefin Sans everywhere, with the [AppText] metrics merged onto the M3
+  /// Outfit everywhere, with the [AppText] metrics merged onto the M3
   /// slots so a bare `Text` inherits weight, line-height and tracking instead
   /// of running at w400 with defaults.
   static TextTheme get _textTheme {
-    final base = GoogleFonts.josefinSansTextTheme().apply(
+    final base = GoogleFonts.outfitTextTheme().apply(
       bodyColor: AppColors.textPrimary,
       displayColor: AppColors.textPrimary,
     );
@@ -180,7 +182,7 @@ abstract final class AppTheme {
       displayLarge: base.displayLarge?.merge(AppText.display),
       headlineMedium: base.headlineMedium?.merge(AppText.headline),
       titleLarge: base.titleLarge?.merge(AppText.title),
-      bodyLarge: base.bodyLarge?.merge(AppText.body),
+      bodyLarge: base.bodyLarge?.merge(AppText.bodyLarge),
       bodyMedium: base.bodyMedium?.merge(AppText.body),
       bodySmall: base.bodySmall?.merge(AppText.caption),
       labelLarge: base.labelLarge?.merge(AppText.label),

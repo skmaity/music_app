@@ -162,7 +162,7 @@ class _QueueRow extends StatelessWidget {
             contentPadding: const EdgeInsets.symmetric(horizontal: Space.md),
             minVerticalPadding: Space.sm,
             leading: RemoteImage(
-              url: '$baseUrl${song.coverurl}',
+              url: song.artworkUri(baseUrl).toString(),
               size: Controls.thumbRow,
               semanticLabel: 'Cover art for ${song.title}',
             ),

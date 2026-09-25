@@ -45,7 +45,8 @@ class _SongActionsSheet extends StatelessWidget {
         // there so a third action added later cannot quietly swallow the scrim
         // you tap to dismiss it.
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * kSheetMaxHeightFraction,
+          maxHeight:
+              MediaQuery.sizeOf(context).height * kSheetMaxHeightFraction,
         ),
         child: SafeArea(
           top: false,
@@ -67,7 +68,13 @@ class _SongActionsSheet extends StatelessWidget {
                         indent: Space.xl,
                         endIndent: Space.xl,
                       ),
-                      _ActionRow(
+                      if (!song.isBackend)
+                        const Padding(
+                          padding: EdgeInsets.all(Space.md),
+                          child: Text('YouTube preview: tap a search result to play. '
+                              'Queueing and saved tracks are not available yet.'),
+                        ),
+                      if (song.isBackend) _ActionRow(
                         icon: Icons.playlist_play_rounded,
                         label: 'Play next',
                         onTap: () => _run(
@@ -76,7 +83,7 @@ class _SongActionsSheet extends StatelessWidget {
                           'Playing next',
                         ),
                       ),
-                      _ActionRow(
+                      if (song.isBackend) _ActionRow(
                         icon: Icons.playlist_add_rounded,
                         label: 'Add to queue',
                         onTap: () => _run(
@@ -149,7 +156,7 @@ class _SheetHeader extends StatelessWidget {
       child: Row(
         children: [
           RemoteImage(
-            url: '$baseUrl${song.coverurl}',
+            url: song.artworkUri(baseUrl).toString(),
             size: Controls.thumb,
             radius: Radii.sm,
             semanticLabel: 'Cover art for ${song.title}',

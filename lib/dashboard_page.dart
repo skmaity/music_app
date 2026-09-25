@@ -281,7 +281,7 @@ class _NowPlayingBar extends StatelessWidget {
     return Obx(() {
       final current = song.currentPlaying.value;
       // songid 0 is SongController's placeholder — nothing has played yet.
-      if (current.songid == 0) return const SizedBox.shrink();
+      if (current.isPlaceholder) return const SizedBox.shrink();
 
       final bar = Padding(
         padding: const EdgeInsets.fromLTRB(Space.sm, 0, Space.sm, Space.sm),
@@ -327,7 +327,7 @@ class _NowPlayingBar extends StatelessWidget {
                                 Hero(
                                   tag: kNowPlayingHeroTag,
                                   child: RemoteImage(
-                                    url: baseUrl + current.coverurl,
+                                    url: current.artworkUri(baseUrl).toString(),
                                     size: Controls.thumbRow,
                                     radius: Radii.sm,
                                   ),

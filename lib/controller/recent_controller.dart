@@ -47,6 +47,7 @@ class RecentController extends GetxController {
       final decoded = jsonDecode(stored) as List<dynamic>;
       recent.value = decoded
           .map((e) => MySongs.fromJson(Map<String, dynamic>.from(e as Map)))
+          .where((song) => song.isBackend)
           .toList();
     } catch (e) {
       // A previous build's format, or a write that got cut off mid-way.
@@ -63,11 +64,11 @@ class RecentController extends GetxController {
   /// song fill the whole strip. Re-playing something already in the list moves
   /// it to the front rather than adding a second copy.
   void record(MySongs song) {
-    // The placeholder SongController starts life with. Never a real track.
-    if (song.songid == 0) return;
+    // External recents need lazy stream resolution before they can be enabled.
+    if (!song.isBackend || song.isPlaceholder) return;
 
     recent
-      ..removeWhere((s) => s.songid == song.songid)
+      ..removeWhere((s) => s.identity == song.identity)
       ..insert(0, song);
 
     if (recent.length > _kRecentLimit) {

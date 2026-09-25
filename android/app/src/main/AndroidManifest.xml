@@ -34,6 +34,7 @@
       prefixed with it (song_controller.dart's setUrl, RemoteImage's url).
     -->
     <application
+        android:networkSecurityConfig="@xml/network_security_config"
         android:enableOnBackInvokedCallback="true"
         android:label="Nyro"
         android:name="${applicationName}"

@@ -93,7 +93,7 @@ class BackgroundController extends GetxController {
       // in-flight time on a slow connection, which is the whole reason two of
       // these could overlap.
       final palette = await PaletteGenerator.fromImageProvider(
-        CachedNetworkImageProvider(baseUrl + cover),
+        CachedNetworkImageProvider(Uri.parse(baseUrl).resolve(cover).toString()),
         maximumColorCount: 20,
       );
 

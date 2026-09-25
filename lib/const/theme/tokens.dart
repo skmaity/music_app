@@ -243,17 +243,17 @@ abstract final class AppText {
   /// display type at default line-height reads as enlarged body copy.
   static const TextStyle display = TextStyle(
     fontSize: 45,
-    fontWeight: FontWeight.w400,
+    fontWeight: FontWeight.w600,
     height: 1.02,
-    letterSpacing: -1.2,
+    letterSpacing: -0.9,
   );
 
   /// In-page section headings ("More").
   static const TextStyle headline = TextStyle(
     fontSize: 30,
-    fontWeight: FontWeight.w500,
+    fontWeight: FontWeight.w600,
     height: 1.1,
-    letterSpacing: -0.5,
+    letterSpacing: -0.45,
   );
 
   /// Empty-state headlines, and the player's track title — the most-looked-at
@@ -262,15 +262,16 @@ abstract final class AppText {
     fontSize: 24,
     fontWeight: FontWeight.w600,
     height: 1.2,
-    letterSpacing: -0.2,
+    letterSpacing: -0.24,
   );
 
   /// One step above body, for a line that leads a block without being a
   /// heading. The player's track title outranks this and uses [title].
   static const TextStyle bodyLarge = TextStyle(
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: FontWeight.w600,
     height: 1.3,
+    letterSpacing: -0.09,
   );
 
   /// Body, row titles, timestamps, nav labels.
@@ -278,6 +279,7 @@ abstract final class AppText {
     fontSize: 16,
     fontWeight: FontWeight.w400,
     height: 1.4,
+    letterSpacing: 0,
   );
 
   /// Empty-state explainers, secondary labels.
@@ -285,7 +287,7 @@ abstract final class AppText {
     fontSize: 14,
     fontWeight: FontWeight.w500,
     height: 1.4,
-    letterSpacing: 0.1,
+    letterSpacing: 0.07,
   );
 
   /// Metadata only. Anything read as a sentence stays at 16 or above.
@@ -293,7 +295,7 @@ abstract final class AppText {
     fontSize: 12,
     fontWeight: FontWeight.w400,
     height: 1.35,
-    letterSpacing: 0.2,
+    letterSpacing: 0.12,
   );
 
   /// Timestamps and durations. Tabular figures stop the layout twitching as

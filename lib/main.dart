@@ -20,9 +20,8 @@ void main() async {
   //
   // androidNotificationIcon is NOT left at its `mipmap/ic_launcher` default.
   // Android status-bar icons are a white-on-transparent mask — the system
-  // throws away colour and keeps the alpha, so a full-colour launcher icon
-  // renders as a solid grey square. ic_stat_nyro is the N-note mark as a
-  // silhouette.
+  // throws away colour and keeps the alpha. `ic_stat_nyro` is the supplied
+  // transparent Nyro logo, which Android renders as the required silhouette.
   await JustAudioBackground.init(
     androidNotificationChannelId: 'com.nyro.app.channel.audio',
     androidNotificationChannelName: 'Nyro playback',

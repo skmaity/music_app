@@ -6,8 +6,18 @@ import 'package:get/get.dart' hide Response;
 import 'package:music_app/apis/all_urls.dart';
 import 'package:music_app/const/theme/tokens.dart';
 import 'package:music_app/model/song_model.dart';
+import 'package:music_app/services/youtube_source.dart';
+
+enum SearchSource { catalogue, youtube }
 
 class SearchSongController extends GetxController {
+  SearchSongController({YouTubeSource? youtube})
+      : youtube = youtube ?? YouTubeSource();
+
+  final YouTubeSource youtube;
+  final Rx<SearchSource> selectedSource = SearchSource.catalogue.obs;
+  final RxString errorMessage = ''.obs;
+
   /// Whatever is currently on screen: the default list when there is no
   /// active query, or the results of [lastQuery] otherwise. One list because
   /// the screen only ever shows one of the two at a time.
@@ -42,6 +52,20 @@ class SearchSongController extends GetxController {
   /// "no songs match X" only makes sense once there is an X.
   bool get isShowingDefault => lastQuery.isEmpty;
 
+  void selectSource(SearchSource source) {
+    if (source == selectedSource.value) return;
+    _debounce?.cancel();
+    _requests.next();
+    selectedSource.value = source;
+    lastQuery = '';
+    hasError.value = false;
+    errorMessage.value = '';
+    isLoading.value = false;
+    searchSongResult.value = source == SearchSource.catalogue
+        ? List<MySongs>.from(_defaultSongs)
+        : <MySongs>[];
+    if (source == SearchSource.catalogue && !_defaultLoaded) loadDefaultSongs();
+  }
 
   Timer? _debounce;
 
@@ -49,11 +73,13 @@ class SearchSongController extends GetxController {
   /// one of `SearchSongController`'s network calls is ever allowed to win the
   /// shared list. Bumped on entry, checked before every write, same pattern as
   /// `BackgroundController._request` and `SongController._request`.
-  int _request = 0;
+  final LatestRequest _requests = LatestRequest();
 
   @override
   void onClose() {
     _debounce?.cancel();
+    _requests.next();
+    youtube.close();
     super.onClose();
   }
 
@@ -63,9 +89,10 @@ class SearchSongController extends GetxController {
   /// returning to the tab free. Pull-to-refresh calls this with
   /// [forceRefresh] true to bypass the cache.
   Future<void> loadDefaultSongs({bool forceRefresh = false}) async {
+    if (selectedSource.value != SearchSource.catalogue) return;
     if (_defaultLoaded && !forceRefresh) return;
 
-    final request = ++_request;
+    final request = _requests.next();
     hasError.value = false;
 
     // Skeleton only when the screen has nothing to show yet. A
@@ -79,7 +106,7 @@ class SearchSongController extends GetxController {
 
       // A search started (or another refresh began) while this was in
       // flight. Its answer belongs to a screen state that no longer exists.
-      if (request != _request) return;
+      if (!_requests.owns(request)) return;
 
       if (res.statusCode == 200) {
         _defaultSongs
@@ -98,12 +125,12 @@ class SearchSongController extends GetxController {
         hasError.value = true;
       }
     } catch (e) {
-      if (request != _request) return;
+      if (!_requests.owns(request)) return;
       debugPrint('Failed to load songs: $e');
       hasError.value = true;
     }
 
-    if (request == _request) isLoading.value = false;
+    if (_requests.owns(request)) isLoading.value = false;
   }
 
   /// What the field calls on every keystroke.
@@ -135,10 +162,17 @@ class SearchSongController extends GetxController {
     // Invalidate anything in flight (a search, or a default-list fetch) so a
     // late answer for the query being abandoned cannot land after this and
     // overwrite the default list that is about to show.
-    ++_request;
+    _requests.next();
 
     lastQuery = '';
     hasError.value = false;
+    errorMessage.value = '';
+
+    if (selectedSource.value == SearchSource.youtube) {
+      isLoading.value = false;
+      searchSongResult.clear();
+      return;
+    }
 
     if (_defaultLoaded) {
       isLoading.value = false;
@@ -153,10 +187,11 @@ class SearchSongController extends GetxController {
   Future<void> searchSong(String query) async {
     // Supersedes both an older in-flight search and any default-list fetch —
     // whichever was still running loses the shared list to this one.
-    final request = ++_request;
+    final request = _requests.next();
 
     lastQuery = query;
     hasError.value = false;
+    errorMessage.value = '';
 
     // Only show the skeleton when there is nothing to look at. Swapping
     // results for a skeleton and back on every debounced keystroke flickers
@@ -168,30 +203,39 @@ class SearchSongController extends GetxController {
       // Query parameters, not string interpolation into the URL: the old
       // `"$searchSongsUrl?query=$query"` sent spaces and punctuation raw,
       // which is exactly what a title-or-artist search is full of.
-      Response res = await api.get(
-        searchSongsUrl,
-        queryParameters: {'query': query},
-      );
-
-      // A newer query (or a clear) arrived while this was in flight. Its
-      // answer describes a search the user has already moved on from.
-      if (request != _request) return;
-
-      if (res.statusCode == 200) {
-        // Replaced in one go, not cleared then refilled — clearing first is
-        // what made the list blink empty between every keystroke.
-        searchSongResult.value = [
-          for (final song in res.data['data'] as List) MySongs.fromJson(song),
-        ];
+      if (selectedSource.value == SearchSource.youtube) {
+        final songs = await youtube.search(query.trim());
+        if (!_requests.owns(request)) return;
+        searchSongResult.value = songs;
       } else {
-        hasError.value = true;
+        Response res = await api.get(
+          searchSongsUrl,
+          queryParameters: {'query': query},
+        );
+
+        // A newer query (or a clear) arrived while this was in flight. Its
+        // answer describes a search the user has already moved on from.
+        if (!_requests.owns(request)) return;
+
+        if (res.statusCode == 200) {
+          // Replaced in one go, not cleared then refilled — clearing first is
+          // what made the list blink empty between every keystroke.
+          searchSongResult.value = [
+            for (final song in res.data['data'] as List) MySongs.fromJson(song),
+          ];
+        } else {
+          hasError.value = true;
+        }
       }
     } catch (e) {
-      if (request != _request) return;
+      if (!_requests.owns(request)) return;
       debugPrint('Search failed: $e');
       hasError.value = true;
+      errorMessage.value = e is YouTubeSourceException
+          ? e.message
+          : 'The search could not be completed.';
     }
 
-    if (request == _request) isLoading.value = false;
+    if (_requests.owns(request)) isLoading.value = false;
   }
 }

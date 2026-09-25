@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Resources the shrinker cannot see a reference to, and must keep anyway.
+
+  Flutter's own Gradle plugin turns on both R8 and resource shrinking for the
+  release build type — FlutterPlugin.kt sets `isMinifyEnabled = true` and
+  `isShrinkResources = true` regardless of what android/app/build.gradle says.
+  So a release build IS shrunk, and anything the shrinker can't trace a
+  reference to is deleted from the APK.
+
+  ic_stat_nyro is exactly that. Its only reference is the Dart string
+  'drawable/ic_stat_nyro' passed to JustAudioBackground.init in lib/main.dart,
+  which audio_service resolves at runtime with Resources.getIdentifier(). The
+  shrinker's "safe" mode looks for resource-name string constants in Java and
+  Kotlin bytecode; this one lives in the AOT snapshot in libapp.so, which it
+  cannot read. So the drawable was stripped, getIdentifier() returned 0, and
+  the first notification the media session posted threw
+
+      IllegalArgumentException: Invalid notification (no valid small icon)
+
+  on the main thread — killing the app the moment a track started playing, in
+  release builds only. Debug builds are not shrunk, which is why it never
+  showed up in development.
+
+  Anything else referenced only from Dart by resource name belongs in this
+  list too.
+-->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_nyro" />

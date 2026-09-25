@@ -1,5 +1,16 @@
 import 'dart:convert';
 
+enum SongSource { backend, youtube }
+
+/// Ephemeral playback state. Implementations may hold network clients and must
+/// never be serialized.
+abstract class SongStreamHandle {
+  int get length;
+  String get mimeType;
+  Stream<List<int>> open();
+  void close();
+}
+
 class MySongs {
   int songid;
   String title;
@@ -7,6 +18,12 @@ class MySongs {
   String coverurl;
   String artist;
   int isquickpick;
+  SongSource source;
+  String? externalId;
+  // Ephemeral metadata for the resolved stream; never serialized.
+  int? streamLength;
+  String? streamMimeType;
+  SongStreamHandle? streamHandle;
 
   MySongs({
     required this.songid,
@@ -15,7 +32,42 @@ class MySongs {
     required this.coverurl,
     required this.artist,
     required this.isquickpick,
+    this.source = SongSource.backend,
+    this.externalId,
+    this.streamLength,
+    this.streamMimeType,
+    this.streamHandle,
   });
+
+  factory MySongs.youtube({
+    required String videoId,
+    required String title,
+    required String artist,
+    required String artworkUrl,
+  }) =>
+      MySongs(
+        songid: 0,
+        title: title,
+        songurl: '',
+        coverurl: artworkUrl,
+        artist: artist,
+        isquickpick: 0,
+        source: SongSource.youtube,
+        externalId: videoId,
+      );
+
+  bool get isBackend => source == SongSource.backend;
+  bool get isPlaceholder => isBackend && songid == 0;
+  String get identity => isBackend ? 'backend:$songid' : 'youtube:$externalId';
+
+  Uri mediaUri(String backendBaseUrl) => _uri(songurl, backendBaseUrl);
+  Uri artworkUri(String backendBaseUrl) => _uri(coverurl, backendBaseUrl);
+
+  static Uri _uri(String value, String backendBaseUrl) {
+    final uri = Uri.parse(value);
+    if (uri.hasScheme) return uri;
+    return Uri.parse(backendBaseUrl).resolve(value);
+  }
 
   MySongs copyWith({
     int? songid,
@@ -24,6 +76,11 @@ class MySongs {
     String? coverurl,
     String? artist,
     int? isquickpick,
+    SongSource? source,
+    String? externalId,
+    int? streamLength,
+    String? streamMimeType,
+    SongStreamHandle? streamHandle,
   }) =>
       MySongs(
         songid: songid ?? this.songid,
@@ -32,6 +89,11 @@ class MySongs {
         coverurl: coverurl ?? this.coverurl,
         artist: artist ?? this.artist,
         isquickpick: isquickpick ?? this.isquickpick,
+        source: source ?? this.source,
+        externalId: externalId ?? this.externalId,
+        streamLength: streamLength ?? this.streamLength,
+        streamMimeType: streamMimeType ?? this.streamMimeType,
+        streamHandle: streamHandle ?? this.streamHandle,
       );
 
   void clear() {
@@ -41,6 +103,12 @@ class MySongs {
     coverurl = '';
     artist = '';
     isquickpick = 0;
+    source = SongSource.backend;
+    externalId = null;
+    streamHandle?.close();
+    streamHandle = null;
+    streamLength = null;
+    streamMimeType = null;
   }
 
   factory MySongs.fromRawJson(Map<String, dynamic> map) =>
@@ -63,14 +131,21 @@ class MySongs {
         coverurl: json["coverurl"] as String? ?? '',
         artist: json["artist"] as String? ?? 'Unknown artist',
         isquickpick: int.tryParse('${json["isquickpick"]}') ?? 0,
+        source: SongSource.values.firstWhere(
+          (source) => source.name == json['source'],
+          orElse: () => SongSource.backend,
+        ),
+        externalId: json['externalId'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
         "songid": songid,
         "title": title,
-        "songurl": songurl,
+        "songurl": isBackend ? songurl : '',
         "coverurl": coverurl,
         "artist": artist,
         "isquickpick": isquickpick,
+        "source": source.name,
+        if (externalId != null) "externalId": externalId,
       };
 }
