@@ -1,7 +1,9 @@
 import 'package:get/get.dart';
+import 'package:music_app/data/library_database.dart';
 import 'package:music_app/controller/artist_controller.dart';
 import 'package:music_app/controller/background_controller.dart';
 import 'package:music_app/controller/internet_controller.dart';
+import 'package:music_app/controller/music_source_controller.dart';
 import 'package:music_app/controller/nav_controller.dart';
 import 'package:music_app/controller/recent_controller.dart';
 import 'package:music_app/controller/settings_controller.dart';
@@ -10,7 +12,13 @@ import 'package:music_app/main_nav_pages/page_controller/page_controller.dart';
 import 'package:music_app/main_nav_pages/quick_picks/quick_picks_controller.dart';
 import 'package:music_app/main_nav_pages/search_songs/controllers/search_song_controller.dart';
 import 'package:music_app/main_nav_pages/user_favourite_songs/controller/user_favourite_controller.dart';
+import 'package:music_app/model/track_ref.dart';
 import 'package:music_app/player_page/player_page_function.dart';
+import 'package:music_app/repositories/library_repository.dart';
+import 'package:music_app/services/backend_music_provider.dart';
+import 'package:music_app/services/local_music_provider.dart';
+import 'package:music_app/services/music_provider.dart';
+import 'package:music_app/services/youtube_music_provider.dart';
 // import 'package:music_app/services/services.dart';
 
 class InitialScreenBindings implements Bindings {
@@ -18,6 +26,22 @@ class InitialScreenBindings implements Bindings {
 
   @override
   void dependencies() {
+    Get.lazyPut(() => LibraryDatabase.open());
+    Get.lazyPut(() => LibraryRepository(Get.find<LibraryDatabase>()));
+    Get.lazyPut(() => NavController());
+    Get.lazyPut<BackendMusicProvider>(() => BackendMusicProvider());
+    Get.lazyPut<LocalMusicProvider>(() => LocalMusicProvider());
+    Get.lazyPut<YoutubeMusicProvider>(() => YoutubeMusicProvider());
+    Get.lazyPut(
+      () => MusicSourceController(
+        navigation: Get.find<NavController>(),
+        providers: <TrackSource, MusicProvider>{
+          TrackSource.local: Get.find<LocalMusicProvider>(),
+          TrackSource.nyroServer: Get.find<BackendMusicProvider>(),
+          TrackSource.youtube: Get.find<YoutubeMusicProvider>(),
+        },
+      ),
+    );
     Get.lazyPut(
       () => QuickPicksController(),
     );
@@ -43,11 +67,11 @@ class InitialScreenBindings implements Bindings {
       () => PageControllerNavPages(),
     );
     Get.lazyPut(
-      () => UserFavouriteController(),
+      () => UserFavouriteController(
+        library: Get.find<LibraryRepository>(),
+      ),
     );
-    Get.lazyPut(
-      () => NavController(),
-    );
+
     Get.lazyPut(
       () => SearchSongController(),
     );
@@ -55,7 +79,9 @@ class InitialScreenBindings implements Bindings {
       () => SettingsController(),
     );
     Get.lazyPut(
-      () => RecentController(),
+      () => RecentController(
+        library: Get.find<LibraryRepository>(),
+      ),
     );
   }
 }

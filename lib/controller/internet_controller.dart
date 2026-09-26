@@ -1,15 +1,26 @@
 import 'dart:async';
 import 'dart:developer';
+
 import 'package:get/get.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
-import 'package:music_app/controller/song_controller.dart';
+
+typedef ConnectionProbe = Future<bool> Function();
+typedef ConnectionStatuses = Stream<InternetConnectionStatus> Function();
 
 class InternetController extends GetxController {
-  RxBool internet = false.obs;
+  InternetController({
+    ConnectionProbe? probe,
+    ConnectionStatuses? statuses,
+  })  : _probe = probe ?? _defaultProbe,
+        _statuses = statuses ?? _defaultStatuses;
 
-  final SongController _songController = Get.find<SongController>();
+  final RxBool internet = false.obs;
+  final ConnectionProbe _probe;
+  final ConnectionStatuses _statuses;
 
-  late StreamSubscription<InternetConnectionStatus> _listener;
+  StreamSubscription<InternetConnectionStatus>? _listener;
+  int _checkGeneration = 0;
+  bool _closed = false;
 
   @override
   void onInit() {
@@ -19,49 +30,47 @@ class InternetController extends GetxController {
 
   @override
   void onClose() {
-    _listener.cancel();
+    _closed = true;
+    _checkGeneration++;
+    _listener?.cancel();
+    _listener = null;
     super.onClose();
   }
 
   Future<void> checkInternet() async {
-    InternetConnectionChecker internetConnectionChecker =
-        InternetConnectionChecker.instance;
-    final hasConnection = await internetConnectionChecker.hasConnection;
-    internet.value = hasConnection;
-    log("Internet available: $hasConnection");
+    final generation = ++_checkGeneration;
 
-    // Neither branch below touches the player's lifetime any more.
-    //
-    // Both used to call `SongController.disposePlayer()`, which called
-    // `player.dispose()` — permanent — while `player` was built once as a
-    // field and never rebuilt. One disconnect, or one merely *slow* reading,
-    // killed the player for the rest of the session: every later seek, pause,
-    // speed change and volume change threw into a disposed object, and the app
-    // could only be recovered by restarting it. `disposePlayer()` no longer
-    // exists; the player is disposed in `SongController.onClose` and nowhere
-    // else.
-    _listener = internetConnectionChecker.onStatusChange.listen((status) {
+    final previous = _listener;
+    _listener = null;
+    await previous?.cancel();
+
+    final hasConnection = await _probe();
+    if (_closed || generation != _checkGeneration) return;
+
+    internet.value = hasConnection;
+    log('Internet available: $hasConnection');
+
+    _listener = _statuses().listen((status) {
+      if (_closed || generation != _checkGeneration) return;
       switch (status) {
         case InternetConnectionStatus.connected:
           log('Connected to the internet.');
           internet.value = true;
-          break;
         case InternetConnectionStatus.disconnected:
           log('Disconnected from the internet.');
           internet.value = false;
-          // Pause rather than tear down. just_audio picks the stream back up
-          // by itself once there is a connection again.
-          _songController.pausePlaying();
-          break;
         case InternetConnectionStatus.slow:
           log('Slow internet connection.');
-          // Deliberately does not touch playback at all. "Slow" is not
-          // "offline" — just_audio buffers through it, and cutting the audio
-          // because a reachability probe was sluggish is worse than a moment
-          // of rebuffering.
-          internet.value = false;
-          break;
+          // Slow is still connected. It must not hide remote browsing or touch
+          // playback; individual requests own their loading/error states.
+          internet.value = true;
       }
     });
   }
+
+  static Future<bool> _defaultProbe() =>
+      InternetConnectionChecker.instance.hasConnection;
+
+  static Stream<InternetConnectionStatus> _defaultStatuses() =>
+      InternetConnectionChecker.instance.onStatusChange;
 }

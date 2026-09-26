@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:music_app/model/song_model.dart';
+import 'package:music_app/repositories/library_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// How many tracks "recently played" remembers.
@@ -23,7 +24,10 @@ const int _kRecentLimit = 20;
 /// place that knows a track actually started — a tap, an auto-advance, a
 /// notification skip and a bluetooth button all pass through it.
 class RecentController extends GetxController {
+  RecentController({LibraryRepository? library}) : _library = library;
+
   static const _kRecentlyPlayed = 'recently_played';
+  final LibraryRepository? _library;
 
   /// Newest first. Empty until [_load] finishes, and empty is a legitimate
   /// resting state — the strip renders nothing at all rather than an empty
@@ -41,6 +45,13 @@ class RecentController extends GetxController {
   Future<void> _load() async {
     _prefs = await SharedPreferences.getInstance();
     final stored = _prefs?.getString(_kRecentlyPlayed);
+    try {
+      await _library?.importLegacyRecents(stored);
+    } catch (e) {
+      // The legacy strip remains usable even if the new library database is
+      // unavailable. A later launch can retry because no import marker landed.
+      debugPrint('Failed to migrate recently-played data: $e');
+    }
     if (stored == null) return;
 
     try {

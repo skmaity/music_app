@@ -1,28 +1,50 @@
 import 'package:get/get.dart';
+import 'package:music_app/model/track_ref.dart';
 
-/// Which rail destination is showing, and which way the next switch travels.
-///
-/// This lived as a `State` field on the Dashboard, which meant nothing else
-/// could move the user — so an empty state could describe the next step
-/// ("browse songs") but never offer it.
-class NavController extends GetxController {
-  final RxInt index = 0.obs;
+enum AppDestination {
+  quickPicks('quick-picks'),
+  songs('songs'),
+  favourites('favourites'),
+  artists('artists'),
+  library('library'),
+  downloads('downloads'),
+  settings('settings');
 
-  /// `1` moving down the rail, `-1` moving up. Read by the page transition.
-  double direction = 1;
-
-  void go(int next) {
-    if (next == index.value) return;
-    direction = next > index.value ? 1 : -1;
-    index.value = next;
-  }
+  const AppDestination(this.stableId);
+  final String stableId;
 }
 
-/// Rail order, so callers say what they mean.
-abstract final class NavDestination {
-  static const int quickPicks = 0;
-  static const int songs = 1;
-  static const int favourites = 2;
-  static const int artists = 3;
-  static const int settings = 4;
+/// Stable destination state, remembered independently for every music source.
+class NavController extends GetxController {
+  NavController({TrackSource initialSource = TrackSource.nyroServer})
+      : _activeSource = initialSource,
+        current = AppDestination.quickPicks.obs;
+
+  final Rx<AppDestination> current;
+  TrackSource _activeSource;
+  final Map<TrackSource, AppDestination> _bySource = {
+    for (final source in TrackSource.values) source: AppDestination.quickPicks,
+  };
+
+  /// `1` moving down the rail, `-1` moving up.
+  double direction = 1;
+
+  TrackSource get activeSource => _activeSource;
+
+  void go(AppDestination next) {
+    final previous = current.value;
+    if (next == previous) return;
+    direction = next.index > previous.index ? 1 : -1;
+    current.value = next;
+    _bySource[_activeSource] = next;
+  }
+
+  void activateSource(TrackSource source) {
+    if (source == _activeSource) return;
+    _bySource[_activeSource] = current.value;
+    final next = _bySource[source] ?? AppDestination.quickPicks;
+    direction = next.index >= current.value.index ? 1 : -1;
+    _activeSource = source;
+    current.value = next;
+  }
 }

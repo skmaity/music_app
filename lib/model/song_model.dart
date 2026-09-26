@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-enum SongSource { backend, youtube }
+enum SongSource { local, backend, youtube }
 
 /// Ephemeral playback state. Implementations may hold network clients and must
 /// never be serialized.
@@ -57,8 +57,14 @@ class MySongs {
       );
 
   bool get isBackend => source == SongSource.backend;
+  bool get isLocal => source == SongSource.local;
+  bool get isYouTube => source == SongSource.youtube;
   bool get isPlaceholder => isBackend && songid == 0;
-  String get identity => isBackend ? 'backend:$songid' : 'youtube:$externalId';
+  String get identity => switch (source) {
+        SongSource.local => 'local:$externalId',
+        SongSource.backend => 'backend:$songid',
+        SongSource.youtube => 'youtube:$externalId',
+      };
 
   Uri mediaUri(String backendBaseUrl) => _uri(songurl, backendBaseUrl);
   Uri artworkUri(String backendBaseUrl) => _uri(coverurl, backendBaseUrl);
@@ -138,10 +144,26 @@ class MySongs {
         externalId: json['externalId'] as String?,
       );
 
+  String get _persistentBackendMediaPath {
+    if (!isBackend || songurl.isEmpty) return '';
+    final uri = Uri.tryParse(songurl);
+    if (uri == null ||
+        uri.hasScheme ||
+        uri.hasAuthority ||
+        uri.hasQuery ||
+        uri.hasFragment ||
+        uri.userInfo.isNotEmpty) {
+      return '';
+    }
+    return songurl;
+  }
+
   Map<String, dynamic> toJson() => {
         "songid": songid,
         "title": title,
-        "songurl": isBackend ? songurl : '',
+        // Current hosted recents need their stable relative PHP media path.
+        // Absolute, query-bearing and external stream URLs are runtime-only.
+        "songurl": _persistentBackendMediaPath,
         "coverurl": coverurl,
         "artist": artist,
         "isquickpick": isquickpick,

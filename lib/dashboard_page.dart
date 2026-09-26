@@ -7,8 +7,13 @@ import 'package:music_app/component/animated_gradient_widget.dart';
 import 'package:music_app/const/theme/dash_board_options_colors.dart';
 import 'package:music_app/const/theme/tokens.dart';
 import 'package:music_app/controller/song_controller.dart';
+import 'package:music_app/controller/music_source_controller.dart';
+import 'package:music_app/controller/source_access_policy.dart';
+import 'package:music_app/global_widgets/empty_state.dart';
 import 'package:music_app/global_widgets/glass_panel.dart';
+import 'package:music_app/global_widgets/music_source_selector.dart';
 import 'package:music_app/global_widgets/motion.dart';
+import 'package:music_app/global_widgets/page_header.dart';
 import 'package:music_app/global_widgets/remote_image.dart';
 import 'package:music_app/main_nav_pages/artists/artists_page.dart';
 import 'package:music_app/controller/background_controller.dart';
@@ -19,25 +24,37 @@ import 'package:music_app/main_nav_pages/user_favourite_songs/user_favourite_pag
 import 'package:music_app/global_widgets/nointernet_page.dart';
 import 'package:music_app/main_nav_pages/quick_picks/quick_picks.dart';
 import 'package:music_app/main_nav_pages/search_songs/songs.dart';
+import 'package:music_app/main_nav_pages/search_songs/controllers/search_song_controller.dart';
+import 'package:music_app/model/source_capabilities.dart';
+import 'package:music_app/model/track_ref.dart';
 import 'package:music_app/player_page/player_page.dart';
 
 /// One nav-rail destination. Filled icon when active, outlined when not —
 /// one icon family, one stroke language.
 class _NavItem {
-  const _NavItem(this.label, this.active, this.inactive);
+  const _NavItem(this.destination, this.label, this.active, this.inactive);
 
+  final AppDestination destination;
   final String label;
   final IconData active;
   final IconData inactive;
 }
 
 const List<_NavItem> _navItems = [
-  _NavItem(
-      'Quick picks', Icons.hotel_class_rounded, Icons.hotel_class_outlined),
-  _NavItem('Songs', Icons.music_note_rounded, Icons.music_note_outlined),
-  _NavItem('Favorites', Icons.favorite_rounded, Icons.favorite_border_rounded),
-  _NavItem('Artists', Icons.person_rounded, Icons.person_outline_rounded),
-  _NavItem('Settings', Icons.settings_rounded, Icons.settings_outlined),
+  _NavItem(AppDestination.quickPicks, 'Quick picks', Icons.hotel_class_rounded,
+      Icons.hotel_class_outlined),
+  _NavItem(AppDestination.songs, 'Songs', Icons.music_note_rounded,
+      Icons.music_note_outlined),
+  _NavItem(AppDestination.favourites, 'Favorites', Icons.favorite_rounded,
+      Icons.favorite_border_rounded),
+  _NavItem(AppDestination.artists, 'Artists', Icons.person_rounded,
+      Icons.person_outline_rounded),
+  _NavItem(AppDestination.library, 'Library', Icons.library_music_rounded,
+      Icons.library_music_outlined),
+  _NavItem(AppDestination.downloads, 'Downloads', Icons.download_done_rounded,
+      Icons.download_outlined),
+  _NavItem(AppDestination.settings, 'Settings', Icons.settings_rounded,
+      Icons.settings_outlined),
 ];
 
 class Dashboard extends StatefulWidget {
@@ -48,18 +65,11 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
-  final List<Widget> pages = const [
-    QuickPicks(),
-    SearchSongs(),
-    UserFavouritePage(),
-    ArtistsPage(),
-    Settings(),
-  ];
-
   /// Which page is showing, and which way the next transition travels — both
   /// on [NavController] rather than in this State, so an empty state can send
   /// the user somewhere instead of only describing where to go.
   late final NavController nav;
+  late final MusicSourceController musicSource;
 
   late final InternetController internetController;
   late BackgroundController backgroundcontroller;
@@ -70,6 +80,7 @@ class _DashboardState extends State<Dashboard> {
     backgroundcontroller.updatePaletteGenerator();
     internetController = Get.find<InternetController>();
     nav = Get.find<NavController>();
+    musicSource = Get.find<MusicSourceController>();
 
     super.initState();
   }
@@ -133,10 +144,10 @@ class _DashboardState extends State<Dashboard> {
                 // before this the last row of every list sat under the gesture
                 // bar.
                 child: SafeArea(
-                  top: false,
                   left: false,
                   child: Column(
                     children: [
+                      const MusicSourceSelector(),
                       Obx(() => Expanded(child: _pageSwitcher(context))),
                       const _NowPlayingBar(),
                     ],
@@ -158,8 +169,17 @@ class _DashboardState extends State<Dashboard> {
   /// read as muddy rather than spatial — and it ran for 800ms, roughly 2.5x
   /// the platform standard on the most repeated interaction in the app.
   Widget _pageSwitcher(BuildContext context) {
-    final offline = !internetController.internet.value;
-    final currentKey = ValueKey<int>(offline ? -1 : nav.index.value);
+    final source = musicSource.selectedSource.value;
+    final destination = nav.current.value;
+    final online = internetController.internet.value;
+    final available = SourceAccessPolicy.canOpen(
+      source: source,
+      destination: destination,
+      online: online,
+    );
+    final currentKey = ValueKey<String>(
+      '${source.storageName}:${destination.stableId}:$available',
+    );
     final still = noMotion(context);
 
     return AnimatedSwitcher(
@@ -188,9 +208,94 @@ class _DashboardState extends State<Dashboard> {
       },
       child: KeyedSubtree(
         key: currentKey,
-        child: offline ? const NointernetPage() : pages[nav.index.value],
+        child:
+            available ? _pageFor(source, destination) : const NointernetPage(),
       ),
     );
+  }
+
+  Widget _pageFor(TrackSource source, AppDestination destination) {
+    if (destination == AppDestination.settings) return const Settings();
+    if (destination == AppDestination.library) {
+      return _SourceStatusPage(
+        title: 'Library',
+        icon: Icons.library_music_outlined,
+        headline: '${source.label} library',
+        message: 'The shared library foundation is ready. Playlist and saved '
+            'item screens arrive in the library feature slice.',
+      );
+    }
+    if (destination == AppDestination.downloads) {
+      return _SourceStatusPage(
+        title: 'Downloads',
+        icon: Icons.download_outlined,
+        headline: 'No ${source.label} downloads yet',
+        message: source == TrackSource.local
+            ? 'Local songs are already on this device.'
+            : 'Eligible offline downloads arrive in the downloads feature slice.',
+      );
+    }
+
+    if (source == TrackSource.local) {
+      return _SourceStatusPage(
+        title: _destinationLabel(destination),
+        icon: Icons.phone_android_rounded,
+        headline: 'Local music is not indexed yet',
+        message: _sourceUnavailableReason(destination),
+      );
+    }
+
+    if (source == TrackSource.youtube) {
+      if (destination == AppDestination.songs) {
+        return const SearchSongs(lockedSource: SearchSource.youtube);
+      }
+      return _SourceStatusPage(
+        title: _destinationLabel(destination),
+        icon: Icons.smart_display_outlined,
+        headline:
+            'YouTube ${_destinationLabel(destination)} are not connected yet',
+        message: _sourceUnavailableReason(destination),
+      );
+    }
+
+    return switch (destination) {
+      AppDestination.quickPicks => const QuickPicks(),
+      AppDestination.songs =>
+        const SearchSongs(lockedSource: SearchSource.catalogue),
+      AppDestination.favourites => const UserFavouritePage(),
+      AppDestination.artists => const ArtistsPage(),
+      AppDestination.library ||
+      AppDestination.downloads ||
+      AppDestination.settings =>
+        throw StateError('Handled above.'),
+    };
+  }
+
+  String _destinationLabel(AppDestination destination) => switch (destination) {
+        AppDestination.quickPicks => 'Quick picks',
+        AppDestination.songs => 'Songs',
+        AppDestination.favourites => 'Favourites',
+        AppDestination.artists => 'Artists',
+        AppDestination.library => 'Library',
+        AppDestination.downloads => 'Downloads',
+        AppDestination.settings => 'Settings',
+      };
+
+  String _sourceUnavailableReason(AppDestination destination) {
+    final capability = switch (destination) {
+      AppDestination.artists => MusicCapability.artistBrowse,
+      AppDestination.downloads => MusicCapability.downloads,
+      AppDestination.quickPicks ||
+      AppDestination.songs ||
+      AppDestination.favourites ||
+      AppDestination.library ||
+      AppDestination.settings =>
+        MusicCapability.discovery,
+    };
+    final status = musicSource.provider.capabilities.status(capability);
+    return status.unavailableReason ??
+        '${musicSource.selectedSource.value.label} supports this capability, '
+            'but this destination is not connected to the shell yet.';
   }
 
   Widget _navRail() {
@@ -204,16 +309,15 @@ class _DashboardState extends State<Dashboard> {
       child: Obx(
         () => Column(
           children: [
-            for (int i = 0; i < _navItems.length; i++)
-              _navButton(i, _navItems[i]),
+            for (final item in _navItems) _navButton(item),
           ],
         ),
       ),
     );
   }
 
-  Widget _navButton(int index, _NavItem item) {
-    final selected = nav.index.value == index;
+  Widget _navButton(_NavItem item) {
+    final selected = nav.current.value == item.destination;
     final color = selected
         ? DashBoardOptionsColors.optionSelected
         : DashBoardOptionsColors.optionUnselected;
@@ -236,9 +340,9 @@ class _DashboardState extends State<Dashboard> {
             ),
             iconAlignment: IconAlignment.end,
             onPressed: () {
-              if (nav.index.value == index) return;
+              if (selected) return;
               HapticFeedback.selectionClick();
-              nav.go(index);
+              nav.go(item.destination);
             },
             icon: Icon(
               selected ? item.active : item.inactive,
@@ -256,6 +360,36 @@ class _DashboardState extends State<Dashboard> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SourceStatusPage extends StatelessWidget {
+  const _SourceStatusPage({
+    required this.title,
+    required this.icon,
+    required this.headline,
+    required this.message,
+  });
+
+  final String title;
+  final IconData icon;
+  final String headline;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        PageHeader(title),
+        Expanded(
+          child: EmptyState(
+            icon: icon,
+            headline: headline,
+            message: message,
+          ),
+        ),
+      ],
     );
   }
 }

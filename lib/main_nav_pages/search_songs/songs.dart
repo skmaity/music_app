@@ -16,7 +16,11 @@ import 'package:music_app/player_page/player_page.dart';
 import 'package:music_app/services/youtube_source.dart';
 
 class SearchSongs extends StatefulWidget {
-  const SearchSongs({super.key});
+  const SearchSongs({super.key, this.lockedSource});
+
+  /// When set by the global source-aware shell, the page cannot drift to a
+  /// different provider through its legacy two-source control.
+  final SearchSource? lockedSource;
 
   @override
   State<SearchSongs> createState() => _SearchSongsState();
@@ -37,11 +41,24 @@ class _SearchSongsState extends State<SearchSongs> {
   @override
   void initState() {
     super.initState();
+    final locked = widget.lockedSource;
+    if (locked != null) controller.selectSource(locked);
     // Nothing fetched the default list before this — the screen opened blank
     // until the user typed a query. Safe to call on every mount: it is a
     // no-op once the cache from a previous visit is warm, which is what makes
     // returning to this tab free.
     controller.loadDefaultSongs();
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchSongs oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final locked = widget.lockedSource;
+    if (locked != null && locked != oldWidget.lockedSource) {
+      _playbackRequests.next();
+      songQuery.clear();
+      controller.selectSource(locked);
+    }
   }
 
   @override
@@ -57,28 +74,29 @@ class _SearchSongsState extends State<SearchSongs> {
     return Column(
       children: [
         const PageHeader('Songs'),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Space.gutter),
-          child: Obx(() => SegmentedButton<SearchSource>(
-                segments: const [
-                  ButtonSegment(
-                    value: SearchSource.catalogue,
-                    label: Text('Catalogue'),
-                  ),
-                  ButtonSegment(
-                    value: SearchSource.youtube,
-                    label: Text('YouTube'),
-                  ),
-                ],
-                selected: {controller.selectedSource.value},
-                onSelectionChanged: (value) {
-                  _playbackRequests.next();
-                  setState(() => _resolving = false);
-                  songQuery.clear();
-                  controller.selectSource(value.single);
-                },
-              )),
-        ),
+        if (widget.lockedSource == null)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Space.gutter),
+            child: Obx(() => SegmentedButton<SearchSource>(
+                  segments: const [
+                    ButtonSegment(
+                      value: SearchSource.catalogue,
+                      label: Text('Catalogue'),
+                    ),
+                    ButtonSegment(
+                      value: SearchSource.youtube,
+                      label: Text('YouTube'),
+                    ),
+                  ],
+                  selected: {controller.selectedSource.value},
+                  onSelectionChanged: (value) {
+                    _playbackRequests.next();
+                    setState(() => _resolving = false);
+                    songQuery.clear();
+                    controller.selectSource(value.single);
+                  },
+                )),
+          ),
         const SizedBox(height: Space.md),
         Obx(() => controller.selectedSource.value == SearchSource.youtube
             ? const Padding(

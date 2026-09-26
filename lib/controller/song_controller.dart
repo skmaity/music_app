@@ -97,14 +97,20 @@ class SongController extends GetxController {
         title: song.title,
         artist: song.artist,
         artUri: song.artworkUri(baseUrl));
-    if (!song.isBackend) {
-      final handle = song.streamHandle;
-      if (handle == null) {
-        throw StateError('YouTube track has no resolved stream handle.');
-      }
-      return YouTubeAudioSource(handle: handle, tag: tag);
+    return switch (song.source) {
+      SongSource.backend => AudioSource.uri(song.mediaUri(baseUrl), tag: tag),
+      SongSource.youtube => _youtubeSource(song, tag),
+      SongSource.local => throw UnsupportedError(
+          'Local playback is not wired until the local-media provider slice.'),
+    };
+  }
+
+  AudioSource _youtubeSource(MySongs song, MediaItem tag) {
+    final handle = song.streamHandle;
+    if (handle == null) {
+      throw StateError('YouTube track has no resolved stream handle.');
     }
-    return AudioSource.uri(song.mediaUri(baseUrl), tag: tag);
+    return YouTubeAudioSource(handle: handle, tag: tag);
   }
 
   // ---------------------------------------------------------------------

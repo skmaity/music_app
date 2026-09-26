@@ -10,11 +10,21 @@ import 'package:music_app/services/youtube_source.dart';
 
 enum SearchSource { catalogue, youtube }
 
+typedef CatalogueSongLoader = Future<List<MySongs>> Function();
+typedef CatalogueSongSearch = Future<List<MySongs>> Function(String query);
+
 class SearchSongController extends GetxController {
-  SearchSongController({YouTubeSource? youtube})
-      : youtube = youtube ?? YouTubeSource();
+  SearchSongController({
+    YouTubeSource? youtube,
+    CatalogueSongLoader? loadCatalogue,
+    CatalogueSongSearch? searchCatalogue,
+  })  : youtube = youtube ?? YouTubeSource(),
+        _loadCatalogue = loadCatalogue,
+        _searchCatalogue = searchCatalogue;
 
   final YouTubeSource youtube;
+  final CatalogueSongLoader? _loadCatalogue;
+  final CatalogueSongSearch? _searchCatalogue;
   final Rx<SearchSource> selectedSource = SearchSource.catalogue.obs;
   final RxString errorMessage = ''.obs;
 
@@ -102,27 +112,41 @@ class SearchSongController extends GetxController {
     isLoading.value = searchSongResult.isEmpty;
 
     try {
-      final res = await api.get(allSongsUrl);
-
-      // A search started (or another refresh began) while this was in
-      // flight. Its answer belongs to a screen state that no longer exists.
-      if (!_requests.owns(request)) return;
-
-      if (res.statusCode == 200) {
+      final loader = _loadCatalogue;
+      if (loader != null) {
+        final songs = await loader();
+        if (!_requests.owns(request)) return;
         _defaultSongs
           ..clear()
-          ..addAll([
-            for (final song in res.data['data'] as List) MySongs.fromJson(song),
-          ]);
+          ..addAll(songs);
         _defaultLoaded = true;
-
-        // Only paint over the visible list if nothing else has since claimed
-        // it — a background refresh must not stomp on an active search.
         if (lastQuery.isEmpty) {
           searchSongResult.value = List<MySongs>.from(_defaultSongs);
         }
       } else {
-        hasError.value = true;
+        final res = await api.get(allSongsUrl);
+
+        // A search started (or another refresh began) while this was in
+        // flight. Its answer belongs to a screen state that no longer exists.
+        if (!_requests.owns(request)) return;
+
+        if (res.statusCode == 200) {
+          _defaultSongs
+            ..clear()
+            ..addAll([
+              for (final song in res.data['data'] as List)
+                MySongs.fromJson(song),
+            ]);
+          _defaultLoaded = true;
+
+          // Only paint over the visible list if nothing else has since claimed
+          // it — a background refresh must not stomp on an active search.
+          if (lastQuery.isEmpty) {
+            searchSongResult.value = List<MySongs>.from(_defaultSongs);
+          }
+        } else {
+          hasError.value = true;
+        }
       }
     } catch (e) {
       if (!_requests.owns(request)) return;
@@ -208,23 +232,31 @@ class SearchSongController extends GetxController {
         if (!_requests.owns(request)) return;
         searchSongResult.value = songs;
       } else {
-        Response res = await api.get(
-          searchSongsUrl,
-          queryParameters: {'query': query},
-        );
-
-        // A newer query (or a clear) arrived while this was in flight. Its
-        // answer describes a search the user has already moved on from.
-        if (!_requests.owns(request)) return;
-
-        if (res.statusCode == 200) {
-          // Replaced in one go, not cleared then refilled — clearing first is
-          // what made the list blink empty between every keystroke.
-          searchSongResult.value = [
-            for (final song in res.data['data'] as List) MySongs.fromJson(song),
-          ];
+        final search = _searchCatalogue;
+        if (search != null) {
+          final songs = await search(query);
+          if (!_requests.owns(request)) return;
+          searchSongResult.value = songs;
         } else {
-          hasError.value = true;
+          Response res = await api.get(
+            searchSongsUrl,
+            queryParameters: {'query': query},
+          );
+
+          // A newer query (or a clear) arrived while this was in flight. Its
+          // answer describes a search the user has already moved on from.
+          if (!_requests.owns(request)) return;
+
+          if (res.statusCode == 200) {
+            // Replaced in one go, not cleared then refilled — clearing first is
+            // what made the list blink empty between every keystroke.
+            searchSongResult.value = [
+              for (final song in res.data['data'] as List)
+                MySongs.fromJson(song),
+            ];
+          } else {
+            hasError.value = true;
+          }
         }
       }
     } catch (e) {

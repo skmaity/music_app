@@ -71,7 +71,7 @@ class _UserFavouritePageState extends State<UserFavouritePage> {
         message: 'Tap the heart while a song is playing '
             'and it will show up here.',
         actionLabel: 'Browse songs',
-        onAction: () => Get.find<NavController>().go(NavDestination.quickPicks),
+        onAction: () => Get.find<NavController>().go(AppDestination.quickPicks),
       );
     }
 

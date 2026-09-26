@@ -6,8 +6,12 @@ import 'package:music_app/apis/all_urls.dart';
 import 'package:music_app/controller/userid_controller.dart';
 import 'package:music_app/main_nav_pages/user_favourite_songs/model/user_favourites_model.dart';
 import 'package:music_app/model/song_model.dart';
+import 'package:music_app/repositories/library_repository.dart';
 
 class UserFavouriteController extends GetxController {
+  UserFavouriteController({LibraryRepository? library}) : _library = library;
+
+  final LibraryRepository? _library;
 
   RxList<MySongs> userFavoutitesList = <MySongs>[].obs;
 
@@ -29,8 +33,16 @@ class UserFavouriteController extends GetxController {
       // Must be POST: the host returns 403 for a GET carrying a body.
       final response = await api.post(getAllUserFavoiritesUrl, data: payLoad);
       if (response.statusCode == 200) {
-        userFavoutitesList.value =
+        final favourites =
             userFavouritesModelFromJson(jsonEncode(response.data)).favorites;
+        userFavoutitesList.value = favourites;
+        try {
+          await _library?.cacheServerFavourites(favourites);
+        } catch (e) {
+          // The server list remains authoritative for this screen. A cache
+          // failure must not turn a successful network response into an error.
+          debugPrint('Failed to cache server favourites: $e');
+        }
       } else {
         hasError.value = true;
       }
