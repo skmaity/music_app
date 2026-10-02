@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:music_app/const/theme/tokens.dart';
 import 'package:music_app/global_widgets/skeleton.dart';
+import 'package:music_app/services/local_media_index.dart';
 
 /// Every remote image in the app goes through this.
 ///
@@ -32,25 +35,7 @@ class RemoteImage extends StatelessWidget {
         child: SizedBox(
           height: size,
           width: size,
-          child: CachedNetworkImage(
-            imageUrl: url,
-            fit: BoxFit.cover,
-            // Covers used to pop. Nothing else in the app arrives that
-            // abruptly, and album art is the one thing the user is looking at.
-            fadeInDuration: Motion.normal,
-            fadeInCurve: Motion.enter,
-            // A shimmering block, not a spinner. This was a 16px ring at
-            // `strokeWidth: 0.5` — sub-pixel on a 1x device and near-invisible
-            // on any of them, reading as dirt on the screen rather than as
-            // loading.
-            placeholder: (_, __) => Skeleton(radius: radius),
-            errorWidget: (_, __, ___) => _placeholder(Image.asset(
-              'assets/nyro_logo.png',
-              width: size * 0.62,
-              height: size * 0.62,
-              fit: BoxFit.contain,
-            )),
-          ),
+          child: _image(),
         ),
       ),
     );
@@ -60,4 +45,45 @@ class RemoteImage extends StatelessWidget {
         color: AppColors.glass1,
         child: Center(child: child),
       );
+
+  Widget _image() {
+    if (LocalMediaPlatform.contentUriFromArtworkRef(url) != null) {
+      return FutureBuilder<Uint8List?>(
+        future: LocalMediaPlatform.loadArtwork(url),
+        builder: (context, snapshot) {
+          final bytes = snapshot.data;
+          if (bytes == null || bytes.isEmpty) {
+            return snapshot.connectionState == ConnectionState.waiting
+                ? Skeleton(radius: radius)
+                : _fallback();
+          }
+          return Image.memory(
+            bytes,
+            width: size,
+            height: size,
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.medium,
+            gaplessPlayback: true,
+          );
+        },
+      );
+    }
+
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      // Covers used to pop. Nothing else in the app arrives that abruptly.
+      fadeInDuration: Motion.normal,
+      fadeInCurve: Motion.enter,
+      placeholder: (_, __) => Skeleton(radius: radius),
+      errorWidget: (_, __, ___) => _fallback(),
+    );
+  }
+
+  Widget _fallback() => _placeholder(Image.asset(
+        'assets/nyro_logo.png',
+        width: size * 0.62,
+        height: size * 0.62,
+        fit: BoxFit.contain,
+      ));
 }

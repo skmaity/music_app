@@ -11,11 +11,12 @@ import 'package:music_app/controller/music_source_controller.dart';
 import 'package:music_app/controller/source_access_policy.dart';
 import 'package:music_app/global_widgets/empty_state.dart';
 import 'package:music_app/global_widgets/glass_panel.dart';
-import 'package:music_app/global_widgets/music_source_selector.dart';
 import 'package:music_app/global_widgets/motion.dart';
 import 'package:music_app/global_widgets/page_header.dart';
 import 'package:music_app/global_widgets/remote_image.dart';
 import 'package:music_app/main_nav_pages/artists/artists_page.dart';
+import 'package:music_app/main_nav_pages/library/library_page.dart';
+import 'package:music_app/main_nav_pages/playlists/playlists.dart';
 import 'package:music_app/controller/background_controller.dart';
 import 'package:music_app/controller/internet_controller.dart';
 import 'package:music_app/controller/nav_controller.dart';
@@ -56,6 +57,21 @@ const List<_NavItem> _navItems = [
   _NavItem(AppDestination.settings, 'Settings', Icons.settings_rounded,
       Icons.settings_outlined),
 ];
+
+@visibleForTesting
+Widget dashboardPageFor(TrackSource source, AppDestination destination) {
+  if (destination != AppDestination.favourites) {
+    throw ArgumentError.value(
+      destination,
+      'destination',
+      'Only source-aware favourites are routed through this helper.',
+    );
+  }
+  if (source == TrackSource.local) {
+    throw UnsupportedError('Local favourites are not available yet.');
+  }
+  return UserFavouritePage(sourceOverride: source);
+}
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -147,7 +163,6 @@ class _DashboardState extends State<Dashboard> {
                   left: false,
                   child: Column(
                     children: [
-                      const MusicSourceSelector(),
                       Obx(() => Expanded(child: _pageSwitcher(context))),
                       const _NowPlayingBar(),
                     ],
@@ -215,15 +230,12 @@ class _DashboardState extends State<Dashboard> {
   }
 
   Widget _pageFor(TrackSource source, AppDestination destination) {
+    if (destination == AppDestination.favourites) {
+      return dashboardPageFor(source, destination);
+    }
     if (destination == AppDestination.settings) return const Settings();
     if (destination == AppDestination.library) {
-      return _SourceStatusPage(
-        title: 'Library',
-        icon: Icons.library_music_outlined,
-        headline: '${source.label} library',
-        message: 'The shared library foundation is ready. Playlist and saved '
-            'item screens arrive in the library feature slice.',
-      );
+      return const Playlists();
     }
     if (destination == AppDestination.downloads) {
       return _SourceStatusPage(
@@ -237,10 +249,16 @@ class _DashboardState extends State<Dashboard> {
     }
 
     if (source == TrackSource.local) {
+      if (destination == AppDestination.quickPicks ||
+          destination == AppDestination.songs ||
+          destination == AppDestination.artists) {
+        return LocalLibraryPage(title: _destinationLabel(destination));
+      }
       return _SourceStatusPage(
         title: _destinationLabel(destination),
         icon: Icons.phone_android_rounded,
-        headline: 'Local music is not indexed yet',
+        headline:
+            'No local ${_destinationLabel(destination).toLowerCase()} yet',
         message: _sourceUnavailableReason(destination),
       );
     }
@@ -300,16 +318,22 @@ class _DashboardState extends State<Dashboard> {
 
   Widget _navRail() {
     return GlassPanel(
+      shadowVisible: false,
       level: GlassLevel.high,
       borderRadius: const BorderRadius.only(
         topRight: Radius.circular(Radii.xl),
         bottomRight: Radius.circular(Radii.xl),
       ),
-      padding: const EdgeInsets.all(Space.xs),
+      padding: const EdgeInsets.all(2),
       child: Obx(
         () => Column(
           children: [
-            for (final item in _navItems) _navButton(item),
+            for (final item in _navItems)
+              if (destinationAvailableForSource(
+                musicSource.selectedSource.value,
+                item.destination,
+              ))
+                _navButton(item),
           ],
         ),
       ),

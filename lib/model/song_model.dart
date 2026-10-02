@@ -111,10 +111,13 @@ class MySongs {
     isquickpick = 0;
     source = SongSource.backend;
     externalId = null;
-    streamHandle?.close();
-    streamHandle = null;
-    streamLength = null;
-    streamMimeType = null;
+    try {
+      streamHandle?.close();
+    } finally {
+      streamHandle = null;
+      streamLength = null;
+      streamMimeType = null;
+    }
   }
 
   factory MySongs.fromRawJson(Map<String, dynamic> map) =>

@@ -53,6 +53,8 @@ class SettingsController extends GetxController {
   static const _kPlaybackSpeed = 'settings_default_playback_speed';
   static const _kSkipInterval = 'settings_skip_interval_seconds';
   static const _kAutoplay = 'settings_autoplay_enabled';
+  static const _kRecommendationAutoplay =
+      'settings_recommendation_autoplay_enabled';
   static const _kRememberPosition = 'settings_remember_position_enabled';
   static const _kLastPositions = 'settings_last_positions';
 
@@ -94,7 +96,15 @@ class SettingsController extends GetxController {
         ? storedInterval
         : 10;
 
-    autoplayEnabled.value = _prefs.getBool(_kAutoplay) ?? true;
+    final savedRecommendation = _prefs.getBool(_kRecommendationAutoplay);
+    recommendationAutoplayEnabled.value =
+        savedRecommendation ?? _prefs.getBool(_kAutoplay) ?? true;
+    if (savedRecommendation == null) {
+      await _prefs.setBool(
+        _kRecommendationAutoplay,
+        recommendationAutoplayEnabled.value,
+      );
+    }
     rememberPositionEnabled.value = _prefs.getBool(_kRememberPosition) ?? false;
 
     final storedPositions = _prefs.getString(_kLastPositions);
@@ -197,13 +207,12 @@ class SettingsController extends GetxController {
 
   static const List<int> availableSkipIntervals = [10, 15, 30];
 
-  /// Gates the plain "move on to the next track" branch of
-  /// `SongController`'s `processingStateStream` listener. Repeat-one still
-  /// replays the track that just finished, and the sleep timer's
-  /// end-of-track pause still fires, regardless of this — neither of those
-  /// is "advancing to a new track", which is the only thing this toggle
-  /// means.
-  RxBool autoplayEnabled = true.obs;
+  /// Controls only generated recommendations. Manually queued songs continue
+  /// regardless of this preference. Migrated once from the legacy autoplay flag.
+  RxBool recommendationAutoplayEnabled = true.obs;
+
+  /// Compatibility alias for older callers; use recommendationAutoplayEnabled.
+  RxBool get autoplayEnabled => recommendationAutoplayEnabled;
 
   /// When on, `SongController` checkpoints and restores per-song playback
   /// position — see `getLastPosition`/`saveLastPosition` below.
@@ -221,10 +230,14 @@ class SettingsController extends GetxController {
     await _prefs.setInt(_kSkipInterval, seconds);
   }
 
-  Future<void> setAutoplayEnabled(bool value) async {
-    autoplayEnabled.value = value;
-    await _prefs.setBool(_kAutoplay, value);
+  Future<void> setRecommendationAutoplayEnabled(bool value) async {
+    recommendationAutoplayEnabled.value = value;
+    await _prefs.setBool(_kRecommendationAutoplay, value);
   }
+
+  /// Compatibility entry point for existing callers.
+  Future<void> setAutoplayEnabled(bool value) =>
+      setRecommendationAutoplayEnabled(value);
 
   Future<void> setRememberPositionEnabled(bool value) async {
     rememberPositionEnabled.value = value;

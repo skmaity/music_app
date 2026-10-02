@@ -8,12 +8,14 @@ final class MusicEntity {
     required this.providerId,
     required this.title,
     this.videoId,
+    this.artist,
   });
 
   final MusicEntityType type;
   final String providerId;
   final String title;
   final String? videoId;
+  final String? artist;
 
   bool get isPlayable => videoId != null;
   String get identity => '${type.name}:$providerId';

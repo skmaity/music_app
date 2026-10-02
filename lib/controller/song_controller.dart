@@ -11,7 +11,12 @@ import 'package:music_app/controller/settings_controller.dart';
 import 'package:music_app/controller/userid_controller.dart';
 import 'package:music_app/main_nav_pages/user_favourite_songs/controller/user_favourite_controller.dart';
 import 'package:music_app/model/repeat_mode.dart';
+import 'package:music_app/model/playback_context.dart';
 import 'package:music_app/model/song_model.dart';
+import 'package:music_app/model/track_ref.dart';
+import 'package:music_app/services/radio_session.dart';
+import 'package:music_app/repositories/library_repository.dart';
+import 'package:music_app/services/playback_resolver.dart';
 import 'package:music_app/services/youtube_audio_source.dart';
 
 /// The player, the queue, and everything hanging off "what is playing".
@@ -28,21 +33,54 @@ import 'package:music_app/services/youtube_audio_source.dart';
 ///
 /// So [currentPlayingList] is now a mirror, kept in step for the UI's benefit,
 /// and the player is the authority. Every transport control below delegates.
+MySongs _placeholderSong() => MySongs(
+      songid: 0,
+      artist: 'artist',
+      coverurl: 'coverurl',
+      songurl: 'songurl',
+      title: 'title',
+      isquickpick: 0,
+    );
+
 class SongController extends GetxController {
+  SongController({
+    RecentController? history,
+    LibraryRepository? library,
+    PlaybackResolver? playbackResolver,
+    FetchRelatedTracks? radioFetch,
+    void Function()? closeRadioDiscovery,
+  })  : _history = history,
+        _library = library,
+        _playbackResolver = playbackResolver,
+        _radioFetch = radioFetch,
+        _closeRadioDiscovery = closeRadioDiscovery;
+
+  final RecentController? _history;
+  final LibraryRepository? _library;
+  final PlaybackResolver? _playbackResolver;
+  final FetchRelatedTracks? _radioFetch;
+  final void Function()? _closeRadioDiscovery;
+  RadioSession? _radioSession;
+  Worker? _recommendationToggleWorker;
+  int? _radioAppendingGeneration;
+  int _radioSeedGeneration = 0;
   late AudioPlayer player = AudioPlayer();
 
   RxBool isPlaying = false.obs;
 
-  Rx<MySongs> currentPlaying = MySongs(
-          songid: 0,
-          artist: 'artist',
-          coverurl: 'coverurl',
-          songurl: 'songurl',
-          title: 'title',
-          isquickpick: 0)
-      .obs;
+  Rx<MySongs> currentPlaying = _placeholderSong().obs;
   RxInt currentIndex = (-1).obs;
   RxList<MySongs> currentPlayingList = <MySongs>[].obs;
+  final RxList<QueueEntryKind> _queueKinds = <QueueEntryKind>[].obs;
+  List<QueueEntryKind> get queueKinds => List.unmodifiable(_queueKinds);
+
+  /// First upcoming recommended occurrence, or the queue length when absent.
+  int get recommendedStartIndex {
+    for (var i = currentIndex.value + 1; i < _queueKinds.length; i++) {
+      if (_queueKinds[i] == QueueEntryKind.recommended) return i;
+    }
+    return currentPlayingList.length;
+  }
 
   // Whether [currentPlaying] is in the user's favourites
   RxBool isFavourite = false.obs;
@@ -70,16 +108,16 @@ class SongController extends GetxController {
   /// before any deliberate seek, and cleared by the listener that consumes it.
   bool _userSkip = false;
 
-  /// The song the listener last acted on.
+  /// The song identity and concrete audio-source occurrence most recently
+  /// handled by the index listener.
   ///
-  /// Keyed on the song, not on the index, and that distinction is load-bearing:
-  /// removing or reordering an entry *above* the playing one shifts its index
-  /// without changing a note of what is playing. Watching the index would read
-  /// every such edit as a track change and refetch the favourite state, rebuild
-  /// the palette, and — with autoplay off — pause the music the user was in the
-  /// middle of.
+  /// The occurrence is load-bearing: duplicate queue entries can have the same
+  /// source-qualified song identity, while a reorder keeps the same AudioSource
+  /// object and must not be misread as a new play.
   String? _lastSongIdentity;
+  Object? _lastPlaybackOccurrence;
   int? _lastBackendSongId;
+  StreamSubscription<PlaybackEvent>? _playbackErrorSubscription;
 
   // ---------------------------------------------------------------------
   // Audio sources
@@ -91,7 +129,7 @@ class SongController extends GetxController {
   /// The [MediaItem] tag is the whole point. `just_audio` only needs the uri;
   /// everything the card shows (title, artist, artwork) reaches it through
   /// this tag and nowhere else.
-  AudioSource _sourceFor(MySongs song) {
+  AudioSource buildAudioSource(MySongs song) {
     final tag = MediaItem(
         id: song.identity,
         title: song.title,
@@ -100,8 +138,7 @@ class SongController extends GetxController {
     return switch (song.source) {
       SongSource.backend => AudioSource.uri(song.mediaUri(baseUrl), tag: tag),
       SongSource.youtube => _youtubeSource(song, tag),
-      SongSource.local => throw UnsupportedError(
-          'Local playback is not wired until the local-media provider slice.'),
+      SongSource.local => AudioSource.uri(song.mediaUri(baseUrl), tag: tag),
     };
   }
 
@@ -179,10 +216,24 @@ class SongController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    if (Get.isRegistered<SettingsController>()) {
+      _recommendationToggleWorker = ever<bool>(
+        Get.find<SettingsController>().recommendationAutoplayEnabled,
+        (enabled) {
+          if (!enabled) unawaited(stopRadioRecommendations());
+        },
+      );
+    }
 
     // Listen to position changes
     player.positionStream.listen((position) {
       currentPosition.value = position;
+      recordPlaybackProgressForHistory(
+        currentPlaying.value,
+        position,
+        playing: player.playing,
+        ready: player.processingState == ProcessingState.ready,
+      );
       _maybeSaveLastPosition(position);
     });
 
@@ -216,6 +267,7 @@ class SongController extends GetxController {
       // between tracks. Everything that used to hang off it and needed to
       // happen per track now lives in the currentIndexStream listener below.
       if (state == ProcessingState.completed) {
+        _history?.playbackCompleted(currentPlaying.value);
         currentPosition.value = Duration.zero;
 
         final settings = Get.find<SettingsController>();
@@ -233,6 +285,56 @@ class SongController extends GetxController {
     });
 
     _watchTrackChanges();
+    _watchPlaybackErrors();
+  }
+
+  @visibleForTesting
+  void recordPlaybackProgressForHistory(
+    MySongs song,
+    Duration position, {
+    required bool playing,
+    required bool ready,
+  }) {
+    if (playing && ready && position > Duration.zero) {
+      _history?.playbackStarted(song);
+    }
+    _history?.positionChanged(song, position);
+  }
+
+  void _watchPlaybackErrors() {
+    _playbackErrorSubscription = player.playbackEventStream.listen(
+      (_) {},
+      onError: (Object error, StackTrace stackTrace) {
+        if (error is! PlayerException) return;
+        final failedSong = localSongForPlaybackError(error);
+        if (failedSong == null) return;
+        unawaited(_removeUnavailableQueuedLocal(failedSong, error.index!));
+      },
+    );
+  }
+
+  @visibleForTesting
+  MySongs? localSongForPlaybackError(PlayerException error) {
+    final index = error.index;
+    if (index == null || index < 0 || index >= currentPlayingList.length) {
+      return null;
+    }
+    final failedSong = currentPlayingList[index];
+    return failedSong.isLocal ? failedSong : null;
+  }
+
+  Future<void> _removeUnavailableQueuedLocal(
+    MySongs failedSong,
+    int failedIndex,
+  ) async {
+    await _guardPlayerCall(() => player.stop(), 'Stop unavailable local file');
+    if (failedIndex >= 0 && failedIndex < player.sequence.length) {
+      await _guardPlayerCall(
+        () => player.removeAudioSourceAt(failedIndex),
+        'Remove unavailable local file',
+      );
+    }
+    handleUnavailableLocalSong(failedSong, queueIndex: failedIndex);
   }
 
   /// The centre of gravity of this controller since the queue moved into the
@@ -242,24 +344,35 @@ class SongController extends GetxController {
   /// the only way a track could change now happens here instead, because the
   /// player can change track without asking: auto-advance, a notification's
   /// skip button, a bluetooth remote, a headset click.
+  @visibleForTesting
+  bool registerPlaybackOccurrence(Object occurrence) {
+    if (identical(occurrence, _lastPlaybackOccurrence)) return false;
+    _lastPlaybackOccurrence = occurrence;
+    return true;
+  }
+
   void _watchTrackChanges() {
     player.currentIndexStream.listen((index) {
       // Null between queues, and briefly out of range while a shorter queue is
       // still settling — the player's sequence and [currentPlayingList] are
       // updated a beat apart.
-      if (index == null || index < 0 || index >= currentPlayingList.length) {
+      if (index == null ||
+          index < 0 ||
+          index >= currentPlayingList.length ||
+          index >= player.sequence.length) {
         return;
       }
 
       final song = currentPlayingList[index];
+      final occurrence = player.sequence[index];
 
-      // Kept in step even when the song did not change — a queue edit above
-      // the playing track shifts its index, and next/previous walk from it.
+      // Kept in step even when the occurrence did not change — a queue edit
+      // above the playing track shifts its index, and next/previous walk from it.
       currentIndex.value = index;
 
+      if (!registerPlaybackOccurrence(occurrence)) return;
       final previousIdentity = _lastSongIdentity;
       final previousBackendId = _lastBackendSongId;
-      if (song.identity == previousIdentity) return;
 
       final autoAdvanced = !_userSkip;
       _userSkip = false;
@@ -282,17 +395,19 @@ class SongController extends GetxController {
       currentPlaying.value = song;
       currentPlaying.refresh();
 
-      if (song.isBackend) {
-        refreshFavouriteStatus(song.songid.toString());
-      } else {
-        isFavourite.value = false;
-      }
+      final recents = _history;
+      recents?.trackChanged(
+        song,
+        previousCompleted: autoAdvanced,
+        previousEarlySkip: !autoAdvanced,
+      );
+
+      unawaited(refreshFavouriteStatusForSong(song));
       Get.find<BackgroundController>().updatePaletteGenerator();
 
-      // Here rather than in `playQueue`, so it catches every way a track can
-      // start: a tap, an auto-advance, the notification's skip button, a
-      // bluetooth remote. `playQueue` only knows about the first.
-      Get.find<RecentController>().record(song);
+      // History is staged here, but persisted only after playingStream confirms
+      // audio actually started. This catches taps, auto-advance, notification
+      // skips and bluetooth controls without counting failed loads.
 
       // Both of these stop playback *at the head of the next track* rather
       // than at the foot of the one that just ended — the player has already
@@ -306,9 +421,14 @@ class SongController extends GetxController {
         return;
       }
 
-      if (autoAdvanced && !settings.autoplayEnabled.value) {
-        _guardPlayerCall(() => player.pause(), 'Autoplay off');
+      final radio = _radioSession;
+      if (radio != null &&
+          !radio.isStopped &&
+          index == currentPlayingList.length - 1) {
+        unawaited(_appendNextRadio(radio, _radioSeedGeneration));
       }
+      // Explicit queue entries continue regardless of recommendation autoplay.
+      // The preference gates generation in _appendNextRadio, not native advance.
     });
   }
 
@@ -324,8 +444,163 @@ class SongController extends GetxController {
   /// `quickpicksController.quickpicks`, the favourites list, an artist's songs
   /// or the search results. Reordering the up-next sheet then silently
   /// reordered that screen too.
+  /// Resolve a searched seed before replacing the native playlist. A failed
+  /// resolution leaves the outgoing playback intact.
+  Future<void> playRadioSeed(TrackRef seed) async {
+    final resolver = _playbackResolver;
+    if (resolver == null) {
+      throw const PlaybackResolutionException(
+          'Playback resolver is unavailable.');
+    }
+    _radioSession?.stop();
+    _radioSession = null;
+    final generation = ++_radioSeedGeneration;
+    final resolved = await resolver.resolve(seed);
+    if (generation != _radioSeedGeneration || isClosed) {
+      resolved.streamHandle?.close();
+      return;
+    }
+    await playQueue([resolved], 0);
+    final fetch = _radioFetch;
+    if (fetch != null && !isClosed && generation == _radioSeedGeneration) {
+      final session = RadioSession(fetchRelated: fetch);
+      _radioSession?.stop();
+      _radioSession = session;
+      unawaited(_startRadio(session, seed, generation));
+    }
+  }
+
+  Future<void> _startRadio(
+      RadioSession session, TrackRef seed, int generation) async {
+    try {
+      await session.start(seed);
+      await _appendNextRadio(session, generation);
+    } catch (error) {
+      debugPrint('Radio discovery unavailable: $error');
+    }
+  }
+
+  Future<void> _appendNextRadio(RadioSession session, int generation) async {
+    if (_radioAppendingGeneration == generation ||
+        isClosed ||
+        generation != _radioSeedGeneration ||
+        !identical(session, _radioSession) ||
+        session.isStopped) {
+      return;
+    }
+    if (!Get.find<SettingsController>().recommendationAutoplayEnabled.value) {
+      return;
+    }
+    _radioAppendingGeneration = generation;
+    try {
+      for (var attempt = 0; attempt < 3; attempt++) {
+        final candidate = await _nextRadioCandidate(session, generation);
+        if (candidate == null) return;
+        MySongs? song;
+        try {
+          song = await _playbackResolver!.resolve(candidate);
+          if (isClosed ||
+              generation != _radioSeedGeneration ||
+              !identical(session, _radioSession) ||
+              session.isStopped) {
+            song.streamHandle?.close();
+            return;
+          }
+          // A manifest alone does not prove its stream can deliver audio.
+          // Preflight only the immediate upcoming item; do not prepare the
+          // whole radio buffer or store signed URLs.
+          final firstBytes = await song.streamHandle!
+              .open()
+              .first
+              .timeout(const Duration(seconds: 12));
+          if (firstBytes.isEmpty) throw StateError('Empty radio audio');
+          if (isClosed ||
+              generation != _radioSeedGeneration ||
+              !identical(session, _radioSession) ||
+              session.isStopped) {
+            song.streamHandle?.close();
+            return;
+          }
+          await appendRadioRecommendation(song);
+          unawaited(session.refillIfNeeded().catchError((Object error) {
+            debugPrint('Radio refill unavailable: $error');
+          }));
+          return;
+        } catch (error) {
+          song?.streamHandle?.close();
+          debugPrint('Radio audio candidate unavailable: ${error.runtimeType}');
+        }
+      }
+    } catch (error) {
+      debugPrint('Radio recommendation unavailable: $error');
+    } finally {
+      if (_radioAppendingGeneration == generation) {
+        _radioAppendingGeneration = null;
+      }
+    }
+  }
+
+  Future<TrackRef?> _nextRadioCandidate(
+      RadioSession session, int generation) async {
+    // Consume buffered music before risking a network refill. A strict
+    // music/artist filter can leave some related windows empty.
+    var candidate = session.takeNext();
+    for (var window = 0;
+        window < 4 && candidate == null && session.continuation != null;
+        window++) {
+      await session.refillIfNeeded();
+      if (isClosed ||
+          generation != _radioSeedGeneration ||
+          session.isStopped ||
+          !identical(session, _radioSession)) {
+        return null;
+      }
+      candidate = session.takeNext();
+    }
+    return candidate;
+  }
+
+  /// Appends through just_audio, which remains the transport and notification
+  /// authority. A failed append must not leave a phantom UI queue entry.
+  @visibleForTesting
+  Future<void> stopRadioRecommendations() async {
+    _radioSeedGeneration++;
+    _radioSession?.stop();
+    _radioSession = null;
+    // Only remove upcoming recommendations. An already playing track and
+    // every explicitly queued occurrence stay in the native playlist.
+    for (var i = currentPlayingList.length - 1; i > currentIndex.value; i--) {
+      if (i < _queueKinds.length &&
+          _queueKinds[i] == QueueEntryKind.recommended) {
+        await removeFromQueue(i);
+      }
+    }
+  }
+
+  Future<void> appendRadioRecommendation(MySongs song) async {
+    final index = currentPlayingList.length;
+    currentPlayingList.add(song);
+    _queueKinds.add(QueueEntryKind.recommended);
+    try {
+      await player.addAudioSource(buildAudioSource(song));
+    } catch (_) {
+      if (index < currentPlayingList.length &&
+          identical(currentPlayingList[index], song)) {
+        currentPlayingList.removeAt(index);
+        _queueKinds.removeAt(index);
+      }
+      song.streamHandle?.close();
+      rethrow;
+    }
+  }
+
   Future<void> playQueue(List<MySongs> songs, int index) async {
     if (songs.isEmpty) return;
+    if (_radioSession != null) {
+      _radioSession!.stop();
+      _radioSession = null;
+      _radioSeedGeneration++;
+    }
     final start = index < 0 || index >= songs.length ? 0 : index;
 
     final settings = Get.find<SettingsController>();
@@ -358,6 +633,11 @@ class SongController extends GetxController {
     // now-playing bar showing the *previous* track for that beat reads as a tap
     // that did not register.
     currentPlayingList.value = List<MySongs>.from(songs);
+    _queueKinds.value = List<QueueEntryKind>.filled(
+      songs.length,
+      QueueEntryKind.explicit,
+      growable: true,
+    );
     currentIndex.value = start;
     currentPlaying.value = song;
     currentPlaying.refresh();
@@ -376,10 +656,21 @@ class SongController extends GetxController {
 
     try {
       await player.setAudioSources(
-        [for (final s in songs) _sourceFor(s)],
+        [for (final s in songs) buildAudioSource(s)],
         initialIndex: start,
         initialPosition: resume ?? Duration.zero,
       );
+
+      // Android's player may recover from an unreadable content URI by silently
+      // advancing to the next source while the queue is loading. That is useful
+      // for radio, but wrong for a direct tap: a deleted local file must not
+      // unexpectedly start a different song.
+      final loadedIndex = player.currentIndex;
+      if (song.isLocal && loadedIndex != null && loadedIndex != start) {
+        await _removeUnavailableQueuedLocal(song, start);
+        return;
+      }
+
       for (final handle in outgoingHandles.difference(incomingHandles)) {
         handle.close();
       }
@@ -401,6 +692,46 @@ class SongController extends GetxController {
       // intended, not a failure.
     } catch (e) {
       debugPrint('Error playing song: $e');
+      if (song.isLocal) {
+        await _removeUnavailableQueuedLocal(song, start);
+      }
+    }
+  }
+
+  @visibleForTesting
+  void handleUnavailableLocalSong(
+    MySongs song, {
+    int? queueIndex,
+    bool notify = true,
+  }) {
+    if (queueIndex != null &&
+        queueIndex >= 0 &&
+        queueIndex < currentPlayingList.length &&
+        currentPlayingList[queueIndex].identity == song.identity) {
+      currentPlayingList.removeAt(queueIndex);
+      if (queueIndex < _queueKinds.length) _queueKinds.removeAt(queueIndex);
+    } else {
+      final matchingIndex = currentPlayingList.indexWhere(
+        (queued) => queued.identity == song.identity,
+      );
+      if (matchingIndex >= 0) {
+        currentPlayingList.removeAt(matchingIndex);
+        if (matchingIndex < _queueKinds.length) {
+          _queueKinds.removeAt(matchingIndex);
+        }
+      }
+    }
+    currentIndex.value = -1;
+    currentPlaying.value = _placeholderSong();
+    currentPlaying.refresh();
+    _lastSongIdentity = null;
+    _lastPlaybackOccurrence = null;
+    if (notify && Get.context != null) {
+      Get.snackbar(
+        'Local file unavailable',
+        'This song may have been moved or deleted. Scan your library again.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
@@ -691,13 +1022,14 @@ class SongController extends GetxController {
 
     final at = (currentIndex.value + 1).clamp(0, currentPlayingList.length);
     currentPlayingList.insert(at, song);
+    _queueKinds.insert(at, QueueEntryKind.explicit);
     await _guardPlayerCall(
-      () => player.insertAudioSource(at, _sourceFor(song)),
+      () => player.insertAudioSource(at, buildAudioSource(song)),
       'Play next',
     );
   }
 
-  /// Appends [song] to the end of the queue.
+  /// Adds behind explicit upcoming entries and before radio recommendations.
   Future<void> addToQueue(MySongs song) async {
     if (!song.isBackend) {
       throw UnsupportedError(
@@ -705,9 +1037,11 @@ class SongController extends GetxController {
     }
     if (currentPlayingList.isEmpty) return playQueue([song], 0);
 
-    currentPlayingList.add(song);
+    final at = recommendedStartIndex;
+    currentPlayingList.insert(at, song);
+    _queueKinds.insert(at, QueueEntryKind.explicit);
     await _guardPlayerCall(
-      () => player.addAudioSource(_sourceFor(song)),
+      () => player.insertAudioSource(at, buildAudioSource(song)),
       'Add to queue',
     );
   }
@@ -735,7 +1069,9 @@ class SongController extends GetxController {
     if (newIndex == oldIndex) return;
 
     final item = currentPlayingList.removeAt(oldIndex);
+    final kind = _queueKinds.removeAt(oldIndex);
     currentPlayingList.insert(newIndex, item);
+    _queueKinds.insert(newIndex, kind);
 
     _guardPlayerCall(
       () => player.moveAudioSource(oldIndex, newIndex),
@@ -756,22 +1092,25 @@ class SongController extends GetxController {
   /// ask for, so with autoplay off it lands paused on the next track. Left as
   /// it is: swiping away what you are listening to is not obviously a request
   /// to keep listening.
-  void removeFromQueue(int index) {
+  Future<void> removeFromQueue(int index) async {
     final length = currentPlayingList.length;
     if (index < 0 || index >= length) return;
 
-    currentPlayingList.removeAt(index);
+    final removed = currentPlayingList.removeAt(index);
+    _queueKinds.removeAt(index);
 
     if (currentPlayingList.isEmpty) {
       currentIndex.value = -1;
       _lastSongIdentity = null;
+      _lastPlaybackOccurrence = null;
       _lastBackendSongId = null;
     }
 
-    _guardPlayerCall(
+    await _guardPlayerCall(
       () => player.removeAudioSourceAt(index),
       'Remove from queue',
     );
+    if (index > currentIndex.value) removed.streamHandle?.close();
   }
 
   // The favourite endpoints only accept POST with a JSON body:
@@ -802,20 +1141,37 @@ class SongController extends GetxController {
     return data?['is_favorite'] == true;
   }
 
+  Future<void> refreshFavouriteStatusForSong(MySongs song) async {
+    final generation = ++_favouriteStateGeneration;
+    final result = song.isBackend
+        ? await isFavouriteSong(song.songid.toString())
+        : await _library?.isFavourite(TrackRef.fromSong(song)) ?? false;
+    if (generation != _favouriteStateGeneration ||
+        song.identity != currentPlaying.value.identity) {
+      return;
+    }
+    isFavourite.value = result;
+  }
+
   // Re-check the favourite state of whatever is playing now. Called on every
   // song change, so next/previous/auto-advance all keep the heart in sync.
   Future<void> refreshFavouriteStatus(String songId) async {
+    final generation = ++_favouriteStateGeneration;
     final result = await isFavouriteSong(songId);
     // The song moved on while this was in flight. This answer describes the
     // previous track, and applying it would put the wrong heart on screen.
-    if (songId != currentPlaying.value.songid.toString()) return;
+    if (generation != _favouriteStateGeneration ||
+        songId != currentPlaying.value.songid.toString()) {
+      return;
+    }
     isFavourite.value = result;
   }
 
   /// Guards against re-entry. The heart is one control: firing an add and a
   /// remove for the same song at once leaves the two disagreeing about which
   /// end state won.
-  bool _toggling = false;
+  int _favouriteStateGeneration = 0;
+  final Set<String> _favouriteTogglesInFlight = <String>{};
 
   /// Add or remove the current song, keeping [isFavourite] and the favourites
   /// list in step with what the server actually did.
@@ -824,16 +1180,32 @@ class SongController extends GetxController {
   /// used to return void and swallow every failure, so a rejected write looked
   /// exactly like a tap that had not registered.
   Future<String?> toggleFavourite() async {
-    if (!currentPlaying.value.isBackend) {
-      return 'YouTube tracks cannot be saved to server favourites.';
-    }
-    if (_toggling) return null;
-    _toggling = true;
+    final song = currentPlaying.value;
+    if (song.isLocal) return 'Local favourites are not available yet.';
+    if (!_favouriteTogglesInFlight.add(song.identity)) return null;
     try {
       final adding = !isFavourite.value;
+      _favouriteStateGeneration++;
+      if (!song.isBackend) {
+        try {
+          await (_library ?? Get.find<LibraryRepository>()).setFavourite(
+            TrackRef.fromSong(song),
+            adding,
+          );
+        } catch (error) {
+          debugPrint('YouTube favourite write failed: $error');
+          return 'That could not be saved on this device.';
+        }
+        _favouriteStateGeneration++;
+        if (currentPlaying.value.identity == song.identity) {
+          isFavourite.value = adding;
+        }
+        return null;
+      }
+
       final data = await _postFavourite(
         adding ? addToFavouriteUrl : removeFromFavouriteUrl,
-        currentPlaying.value.songid.toString(),
+        song.songid.toString(),
       );
 
       if (data == null) return 'Could not reach the server.';
@@ -841,16 +1213,19 @@ class SongController extends GetxController {
         return data['message'] as String? ?? 'That could not be saved.';
       }
 
-      isFavourite.value = adding;
+      _favouriteStateGeneration++;
+      if (currentPlaying.value.identity == song.identity) {
+        isFavourite.value = adding;
+      }
 
-      // Unconditionally. This sat behind `Get.isRegistered`, which reports
-      // false for anything bindings registered with `lazyPut` until something
-      // has resolved it — so until you had opened Favourites at least once,
-      // this quietly did nothing.
-      Get.find<UserFavouriteController>().getUserFavourites();
+      // Refresh the server list only when that source is the visible favourites
+      // page. Local and YouTube lists must not be replaced by a server response.
+      unawaited(
+        Get.find<UserFavouriteController>().refreshServerFavouritesIfVisible(),
+      );
       return null;
     } finally {
-      _toggling = false;
+      _favouriteTogglesInFlight.remove(song.identity);
     }
   }
 
@@ -885,6 +1260,11 @@ class SongController extends GetxController {
     // Otherwise a timer armed on this page outlives the controller and fires
     // into a disposed player once GetX tears this down.
     _sleepTicker?.cancel();
+    _radioSeedGeneration++;
+    _radioSession?.stop();
+    _recommendationToggleWorker?.dispose();
+    _closeRadioDiscovery?.call();
+    _playbackErrorSubscription?.cancel();
     for (final handle in <SongStreamHandle>{
       for (final song in currentPlayingList)
         if (song.streamHandle != null) song.streamHandle!,

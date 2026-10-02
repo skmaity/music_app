@@ -16,8 +16,13 @@ import 'package:music_app/model/track_ref.dart';
 import 'package:music_app/player_page/player_page_function.dart';
 import 'package:music_app/repositories/library_repository.dart';
 import 'package:music_app/services/backend_music_provider.dart';
+import 'package:music_app/services/local_media_index.dart';
 import 'package:music_app/services/local_music_provider.dart';
 import 'package:music_app/services/music_provider.dart';
+import 'package:music_app/services/playback_resolver.dart';
+import 'package:music_app/services/radio_discovery_adapter.dart';
+import 'package:music_app/services/youtube_music_discovery.dart';
+import 'package:music_app/services/youtube_related_provider.dart';
 import 'package:music_app/services/youtube_music_provider.dart';
 // import 'package:music_app/services/services.dart';
 
@@ -30,11 +35,31 @@ class InitialScreenBindings implements Bindings {
     Get.lazyPut(() => LibraryRepository(Get.find<LibraryDatabase>()));
     Get.lazyPut(() => NavController());
     Get.lazyPut<BackendMusicProvider>(() => BackendMusicProvider());
-    Get.lazyPut<LocalMusicProvider>(() => LocalMusicProvider());
+    Get.lazyPut<LocalMediaIndex>(
+      () => LocalMediaIndex(gateway: AndroidMediaStoreGateway()),
+    );
+    Get.lazyPut<LocalMusicProvider>(() {
+      final index = Get.find<LocalMediaIndex>();
+      return LocalMusicProvider(
+        loadSongs: () async => (await index.refresh()).tracks,
+        searchSongs: (query) async {
+          if (index.tracks.isEmpty) await index.refresh();
+          return index.search(query);
+        },
+      );
+    });
     Get.lazyPut<YoutubeMusicProvider>(() => YoutubeMusicProvider());
     Get.lazyPut(
       () => MusicSourceController(
         navigation: Get.find<NavController>(),
+        loadSavedSource: () =>
+            _loadBrowsingSource(Get.find<LibraryRepository>()),
+        saveSource: (source) =>
+            Get.find<LibraryRepository>().setSourcePreference(
+          TrackSource.nyroServer,
+          _browsingSourcePreferenceKey,
+          source.storageName,
+        ),
         providers: <TrackSource, MusicProvider>{
           TrackSource.local: Get.find<LocalMusicProvider>(),
           TrackSource.nyroServer: Get.find<BackendMusicProvider>(),
@@ -52,7 +77,7 @@ class InitialScreenBindings implements Bindings {
       () => InternetController(),
     );
     Get.lazyPut(
-      () => SongController(),
+      () => _buildSongController(),
     );
     // Get.lazyPut(
     //   () => FireStoreServices(),
@@ -69,6 +94,8 @@ class InitialScreenBindings implements Bindings {
     Get.lazyPut(
       () => UserFavouriteController(
         library: Get.find<LibraryRepository>(),
+        resolveYoutube: (song) =>
+            Get.find<SearchSongController>().youtube.resolve(song),
       ),
     );
 
@@ -83,5 +110,41 @@ class InitialScreenBindings implements Bindings {
         library: Get.find<LibraryRepository>(),
       ),
     );
+  }
+}
+
+SongController _buildSongController() {
+  final related = YouTubeRelatedProvider();
+  final discovery = YouTubeMusicDiscovery(
+    timeout: const Duration(seconds: 18),
+    search: (_, __) => Future.error(
+      UnsupportedError('Radio discovery does not provide search.'),
+    ),
+    relatedTracks: related.fetch,
+  );
+  return SongController(
+    history: Get.find<RecentController>(),
+    library: Get.find<LibraryRepository>(),
+    playbackResolver: PlaybackResolver(
+      resolveYoutube: (track) =>
+          Get.find<SearchSongController>().youtube.resolve(track.toSong()),
+    ),
+    radioFetch: radioDiscoveryAdapter(discovery),
+    closeRadioDiscovery: related.close,
+  );
+}
+
+const _browsingSourcePreferenceKey = 'selected_browsing_source';
+
+Future<TrackSource?> _loadBrowsingSource(LibraryRepository repository) async {
+  final saved = await repository.sourcePreference(
+    TrackSource.nyroServer,
+    _browsingSourcePreferenceKey,
+  );
+  if (saved == null) return null;
+  try {
+    return TrackSource.parse(saved);
+  } on FormatException {
+    return null;
   }
 }

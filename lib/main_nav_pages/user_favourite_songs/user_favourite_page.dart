@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:get/get.dart';
 import 'package:music_app/const/theme/tokens.dart';
+import 'package:music_app/controller/music_source_controller.dart';
 import 'package:music_app/controller/nav_controller.dart';
 import 'package:music_app/controller/song_controller.dart';
 import 'package:music_app/global_widgets/empty_state.dart';
@@ -10,10 +13,21 @@ import 'package:music_app/global_widgets/page_header.dart';
 import 'package:music_app/global_widgets/skeleton.dart';
 import 'package:music_app/global_widgets/song_tile.dart';
 import 'package:music_app/main_nav_pages/user_favourite_songs/controller/user_favourite_controller.dart';
+import 'package:music_app/model/song_model.dart';
+import 'package:music_app/model/track_ref.dart';
 import 'package:music_app/player_page/player_page.dart';
 
+typedef PreparedFavouritePlayer = Future<void> Function(MySongs song);
+
 class UserFavouritePage extends StatefulWidget {
-  const UserFavouritePage({super.key});
+  const UserFavouritePage({
+    super.key,
+    this.sourceOverride,
+    this.onPreparedPlay,
+  });
+
+  final TrackSource? sourceOverride;
+  final PreparedFavouritePlayer? onPreparedPlay;
 
   @override
   State<UserFavouritePage> createState() => _UserFavouritePageState();
@@ -22,16 +36,63 @@ class UserFavouritePage extends StatefulWidget {
 class _UserFavouritePageState extends State<UserFavouritePage> {
   late SongController controller;
   late UserFavouriteController favouriteController;
+  Worker? _sourceWorker;
+
+  TrackSource get _source =>
+      widget.sourceOverride ??
+      Get.find<MusicSourceController>().selectedSource.value;
 
   @override
   void initState() {
+    super.initState();
     controller = Get.find<SongController>();
     favouriteController = Get.find<UserFavouriteController>();
-    favouriteController.getUserFavourites();
-    super.initState();
+    final override = widget.sourceOverride;
+    if (override == null) {
+      final sourceController = Get.find<MusicSourceController>();
+      _sourceWorker = ever<TrackSource>(
+        sourceController.selectedSource,
+        (source) => unawaited(favouriteController.loadFavourites(source)),
+      );
+    }
+    unawaited(favouriteController.loadFavourites(_source));
   }
 
-  Future<void> _reload() => favouriteController.getUserFavourites();
+  @override
+  void dispose() {
+    _sourceWorker?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _reload() => favouriteController.loadFavourites(_source);
+
+  Future<void> _playFavourite(BuildContext context, MySongs favourite) async {
+    try {
+      final prepared = await favouriteController.prepareForPlayback(favourite);
+      if (!context.mounted) {
+        prepared.streamHandle?.close();
+        return;
+      }
+      final callback = widget.onPreparedPlay;
+      if (callback != null) {
+        await callback(prepared);
+        return;
+      }
+      final queue = prepared.isYouTube
+          ? <MySongs>[prepared].obs
+          : favouriteController.userFavoutitesList;
+      playSong(context, prepared, queue);
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context)
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('This favourite could not be prepared for playback.'),
+          ),
+        );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +136,7 @@ class _UserFavouritePageState extends State<UserFavouritePage> {
       );
     }
 
-    final playingId = controller.currentPlaying.value.songid;
+    final playingIdentity = controller.currentPlaying.value.identity;
 
     return KeyedSubtree(
       key: const ValueKey('content'),
@@ -93,11 +154,10 @@ class _UserFavouritePageState extends State<UserFavouritePage> {
                 context,
                 index,
                 SongTile(
-                  key: ValueKey(favourite.songid),
+                  key: ValueKey(favourite.identity),
                   song: favourite,
-                  isPlaying: playingId == favourite.songid,
-                  onTap: () => playSong(context, favourite,
-                      favouriteController.userFavoutitesList),
+                  isPlaying: playingIdentity == favourite.identity,
+                  onTap: () => _playFavourite(context, favourite),
                 ),
               );
             },

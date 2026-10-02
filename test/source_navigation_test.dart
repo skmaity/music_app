@@ -6,7 +6,9 @@ import 'package:get/get.dart';
 import 'package:music_app/controller/music_source_controller.dart';
 import 'package:music_app/controller/nav_controller.dart';
 import 'package:music_app/controller/song_controller.dart';
+import 'package:music_app/dashboard_page.dart';
 import 'package:music_app/global_widgets/music_source_selector.dart';
+import 'package:music_app/main_nav_pages/user_favourite_songs/user_favourite_page.dart';
 import 'package:music_app/main_nav_pages/search_songs/controllers/search_song_controller.dart';
 import 'package:music_app/model/source_capabilities.dart';
 import 'package:music_app/model/song_model.dart';
@@ -36,10 +38,23 @@ void main() {
     navigation.activateSource(TrackSource.youtube);
     expect(navigation.current.value, AppDestination.songs);
     navigation.activateSource(TrackSource.local);
-    expect(navigation.current.value, AppDestination.library);
+    expect(navigation.current.value, AppDestination.quickPicks);
 
     expect(AppDestination.library.stableId, 'library');
     expect(AppDestination.downloads.stableId, 'downloads');
+  });
+
+  test('favourites destination routes only remote sources', () {
+    for (final source in [TrackSource.nyroServer, TrackSource.youtube]) {
+      final page = dashboardPageFor(source, AppDestination.favourites);
+
+      expect(page, isA<UserFavouritePage>());
+      expect((page as UserFavouritePage).sourceOverride, source);
+    }
+    expect(
+      () => dashboardPageFor(TrackSource.local, AppDestination.favourites),
+      throwsUnsupportedError,
+    );
   });
 
   test('source switching does not own or mutate active playback', () {
@@ -109,11 +124,37 @@ void main() {
     expect(controller.selectedSource.value, TrackSource.local);
     expect(navigation.current.value, AppDestination.quickPicks);
     navigation.go(AppDestination.library);
+    expect(navigation.current.value, AppDestination.quickPicks);
 
     controller.selectSource(TrackSource.nyroServer);
     expect(navigation.current.value, AppDestination.artists);
     controller.selectSource(TrackSource.local);
-    expect(navigation.current.value, AppDestination.library);
+    expect(navigation.current.value, AppDestination.quickPicks);
+  });
+
+  test('first-time browsing defaults to YouTube', () {
+    final controller = MusicSourceController(providers: _providers());
+
+    expect(controller.selectedSource.value, TrackSource.youtube);
+  });
+
+  test('saved source restores but cannot override a newer user selection',
+      () async {
+    final savedSource = Completer<TrackSource?>();
+    final persisted = <TrackSource>[];
+    final controller = MusicSourceController(
+      providers: _providers(),
+      loadSavedSource: () => savedSource.future,
+      saveSource: (source) async => persisted.add(source),
+    );
+
+    final restore = controller.restoreSelection();
+    controller.selectSource(TrackSource.local);
+    savedSource.complete(TrackSource.nyroServer);
+    await restore;
+
+    expect(controller.selectedSource.value, TrackSource.local);
+    expect(persisted, [TrackSource.local]);
   });
 
   testWidgets('selector exposes all sources and changes browsing source',

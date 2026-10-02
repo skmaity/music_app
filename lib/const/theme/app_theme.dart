@@ -51,10 +51,7 @@ abstract final class AppTheme {
         style: ButtonStyle(
           textStyle: WidgetStatePropertyAll(
             GoogleFonts.varelaRound(
-                fontSize: 16,
-                height: 1.2,
-                letterSpacing: 0.4,
-                fontWeight: FontWeight.w800),
+                fontSize: 15, height: 1.2, fontWeight: FontWeight.w600),
           ),
           overlayColor: WidgetStatePropertyAll(
             Colors.white.withValues(alpha: 0.08),

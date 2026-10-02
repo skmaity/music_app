@@ -6,6 +6,9 @@ import 'package:music_app/controller/settings_controller.dart';
 import 'package:music_app/controller/song_controller.dart';
 import 'package:music_app/controller/userid_controller.dart';
 import 'package:music_app/global_widgets/glass_panel.dart';
+import 'package:music_app/global_widgets/music_source_selector.dart';
+import 'package:music_app/main_nav_pages/settings/recommendation_autoplay_control.dart';
+
 import 'package:music_app/global_widgets/page_header.dart';
 import 'package:music_app/global_widgets/select_pill.dart';
 
@@ -66,6 +69,12 @@ class _SettingsState extends State<Settings> {
       padding: const EdgeInsets.fromLTRB(
           Space.gutter, Space.sm, Space.gutter, Space.xxl),
       children: [
+        _Section(
+          title: 'Source',
+          children: [
+            const MusicSourceSelector(),
+          ],
+        ),
         _Section(
           title: 'Appearance',
           children: [
@@ -130,15 +139,7 @@ class _SettingsState extends State<Settings> {
               ),
             ),
             const _RowDivider(),
-            Obx(
-              () => _SwitchRow(
-                icon: Icons.playlist_play_rounded,
-                title: 'Autoplay',
-                subtitle: 'Move on to the next track when one finishes.',
-                value: settings.autoplayEnabled.value,
-                onChanged: settings.setAutoplayEnabled,
-              ),
-            ),
+            RecommendationAutoplayControl(settings: settings),
             const _RowDivider(),
             Obx(
               () => _SwitchRow(
@@ -282,8 +283,8 @@ class _SwitchRow extends StatelessWidget {
       onChanged: onChanged,
       // The whole row is the target, not just the switch — SwitchListTile
       // clears 48dp on its own and announces the toggled state for free.
-      contentPadding: const EdgeInsets.symmetric(
-          horizontal: Space.md, vertical: Space.xs),
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: Space.md, vertical: Space.xs),
       secondary: Icon(icon, color: AppColors.textSecondary),
       title: Text(title, style: text.bodyMedium),
       subtitle: Text(
@@ -452,8 +453,8 @@ class _ImageCacheRow extends StatelessWidget {
 
     return Obx(
       () => ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: Space.md, vertical: Space.xs),
+        contentPadding: const EdgeInsets.symmetric(
+            horizontal: Space.md, vertical: Space.xs),
         leading: const Icon(Icons.photo_library_outlined,
             color: AppColors.textSecondary),
         title: Text('Cached artwork', style: text.bodyMedium),
@@ -537,8 +538,8 @@ class _IdentityBlock extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Reset',
-                style: TextStyle(color: AppColors.danger)),
+            child:
+                const Text('Reset', style: TextStyle(color: AppColors.danger)),
           ),
         ],
       ),
@@ -555,8 +556,8 @@ class _IdentityBlock extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(
-              Space.md, Space.md, Space.md, Space.sm),
+          padding:
+              const EdgeInsets.fromLTRB(Space.md, Space.md, Space.md, Space.sm),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

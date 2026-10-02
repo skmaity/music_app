@@ -31,12 +31,14 @@ class GlassPanel extends StatelessWidget {
     required this.borderRadius,
     this.level = GlassLevel.mid,
     this.padding = EdgeInsets.zero,
+    this.shadowVisible = true,
   });
 
   final Widget child;
   final BorderRadius borderRadius;
   final GlassLevel level;
   final EdgeInsetsGeometry padding;
+  final bool shadowVisible;
 
   bool get _isPane => level != GlassLevel.low;
 
@@ -72,7 +74,7 @@ class GlassPanel extends StatelessWidget {
         // Shadow behind, so the clip cannot cut it off.
         decoration: BoxDecoration(
           borderRadius: borderRadius,
-          boxShadow: kPanelShadow,
+          boxShadow: shadowVisible ? kPanelShadow : null,
         ),
         child: DecoratedBox(
           // Hairline in *front*, and outside the clip. Drawn inside it, the

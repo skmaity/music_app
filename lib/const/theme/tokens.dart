@@ -243,9 +243,9 @@ abstract final class AppText {
   /// display type at default line-height reads as enlarged body copy.
   static const TextStyle display = TextStyle(
     fontSize: 45,
-    fontWeight: FontWeight.w600,
+    fontWeight: FontWeight.w500,
     height: 1.02,
-    letterSpacing: -0.9,
+    letterSpacing: -0.5,
   );
 
   /// In-page section headings ("More").

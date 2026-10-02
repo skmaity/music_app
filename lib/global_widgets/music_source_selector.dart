@@ -46,6 +46,13 @@ class MusicSourceSelector extends StatelessWidget {
               ),
             ],
             selected: {controller.selectedSource.value},
+            style: ButtonStyle(
+              foregroundColor: WidgetStateProperty.resolveWith(
+                (states) => states.contains(WidgetState.selected)
+                    ? Colors.black87
+                    : AppColors.textPrimary,
+              ),
+            ),
             onSelectionChanged: (selection) {
               controller.selectSource(selection.single);
             },

@@ -5,18 +5,22 @@ import 'package:music_app/services/music_provider.dart';
 typedef LocalTrackLoader = Future<List<TrackRef>> Function();
 typedef LocalTrackSearch = Future<List<TrackRef>> Function(String query);
 
-/// Adapter boundary for Task 4's MediaStore index.
-///
-/// Until that index is wired, the defaults are an honest empty local library.
+/// Provider adapter over Nyro's MediaStore-backed local index.
 class LocalMusicProvider implements MusicProvider {
   LocalMusicProvider({
     LocalTrackLoader? loadSongs,
     LocalTrackSearch? searchSongs,
+    this.pageSize = 100,
   })  : _loadSongs = loadSongs ?? _empty,
-        _searchSongs = searchSongs;
+        _searchSongs = searchSongs {
+    if (pageSize <= 0) {
+      throw ArgumentError.value(pageSize, 'pageSize', 'must be positive');
+    }
+  }
 
   final LocalTrackLoader _loadSongs;
   final LocalTrackSearch? _searchSongs;
+  final int pageSize;
 
   @override
   TrackSource get source => TrackSource.local;
@@ -28,18 +32,12 @@ class LocalMusicProvider implements MusicProvider {
   SourceCapabilities get capabilities => SourceCapabilities(
         source: source,
         statuses: {
-          MusicCapability.discovery: CapabilityStatus.unavailable(
-            'Local discovery is available after media indexing.',
-          ),
+          MusicCapability.discovery: const CapabilityStatus.available(),
           MusicCapability.relatedTracks: CapabilityStatus.unavailable(
             'Related-track radio is not available for local music yet.',
           ),
-          MusicCapability.albumBrowse: CapabilityStatus.unavailable(
-            'Local albums are available after media indexing.',
-          ),
-          MusicCapability.artistBrowse: CapabilityStatus.unavailable(
-            'Local artists are available after media indexing.',
-          ),
+          MusicCapability.albumBrowse: const CapabilityStatus.available(),
+          MusicCapability.artistBrowse: const CapabilityStatus.available(),
           MusicCapability.downloads: CapabilityStatus.unavailable(
             'Local songs are already on this device.',
           ),
@@ -49,8 +47,7 @@ class LocalMusicProvider implements MusicProvider {
 
   @override
   Future<MusicProviderPage> loadSongs({String? continuation}) async {
-    _rejectContinuation(continuation);
-    return MusicProviderPage(items: _localOnly(await _loadSongs()));
+    return _page(_localOnly(await _loadSongs()), continuation);
   }
 
   @override
@@ -62,7 +59,6 @@ class LocalMusicProvider implements MusicProvider {
     String query, {
     String? continuation,
   }) async {
-    _rejectContinuation(continuation);
     final callback = _searchSongs;
     final tracks =
         callback == null ? await _loadSongs() : await callback(query);
@@ -72,7 +68,7 @@ class LocalMusicProvider implements MusicProvider {
             track.title.toLowerCase().contains(normalized) ||
             track.artist.toLowerCase().contains(normalized))
         : tracks;
-    return MusicProviderPage(items: _localOnly(filtered));
+    return _page(_localOnly(filtered), continuation);
   }
 
   @override
@@ -84,11 +80,15 @@ class LocalMusicProvider implements MusicProvider {
       .where((track) => track.source == TrackSource.local)
       .toList(growable: false);
 
-  static void _rejectContinuation(String? continuation) {
-    if (continuation != null) {
-      throw const MusicProviderException(
-        'Local library pagination is not wired yet.',
-      );
+  MusicProviderPage _page(List<TrackRef> tracks, String? continuation) {
+    final offset = continuation == null ? 0 : int.tryParse(continuation);
+    if (offset == null || offset < 0 || offset > tracks.length) {
+      throw const MusicProviderException('Invalid local library continuation.');
     }
+    final end = (offset + pageSize).clamp(0, tracks.length);
+    return MusicProviderPage(
+      items: tracks.sublist(offset, end),
+      continuation: end < tracks.length ? end.toString() : null,
+    );
   }
 }

@@ -8,6 +8,8 @@ import 'package:music_app/global_widgets/glass_panel.dart';
 import 'package:music_app/global_widgets/remote_image.dart';
 import 'package:music_app/global_widgets/sheet_handle.dart';
 import 'package:music_app/model/song_model.dart';
+import 'package:music_app/model/track_ref.dart';
+import 'package:music_app/repositories/library_repository.dart';
 
 /// What you can do with a song other than play it right now.
 ///
@@ -33,7 +35,6 @@ class _SongActionsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<SongController>();
     final text = Theme.of(context).textTheme;
 
     return GlassPanel(
@@ -68,30 +69,39 @@ class _SongActionsSheet extends StatelessWidget {
                         indent: Space.xl,
                         endIndent: Space.xl,
                       ),
-                      if (!song.isBackend)
+                      if (song.isYouTube)
                         const Padding(
                           padding: EdgeInsets.all(Space.md),
-                          child: Text('YouTube preview: tap a search result to play. '
-                              'Queueing and saved tracks are not available yet.'),
+                          child: Text(
+                            'Online queueing arrives with lazy playback. You can save this track now.',
+                          ),
                         ),
-                      if (song.isBackend) _ActionRow(
-                        icon: Icons.playlist_play_rounded,
-                        label: 'Play next',
-                        onTap: () => _run(
-                          context,
-                          () => controller.playNext(song),
-                          'Playing next',
+                      if (!song.isLocal)
+                        _ActionRow(
+                          icon: Icons.playlist_add_check_rounded,
+                          label: 'Add to playlist',
+                          onTap: () => _addToPlaylist(context),
                         ),
-                      ),
-                      if (song.isBackend) _ActionRow(
-                        icon: Icons.playlist_add_rounded,
-                        label: 'Add to queue',
-                        onTap: () => _run(
-                          context,
-                          () => controller.addToQueue(song),
-                          'Added to queue',
+                      if (song.isBackend)
+                        _ActionRow(
+                          icon: Icons.playlist_play_rounded,
+                          label: 'Play next',
+                          onTap: () => _run(
+                            context,
+                            () => Get.find<SongController>().playNext(song),
+                            'Playing next',
+                          ),
                         ),
-                      ),
+                      if (song.isBackend)
+                        _ActionRow(
+                          icon: Icons.playlist_add_rounded,
+                          label: 'Add to queue',
+                          onTap: () => _run(
+                            context,
+                            () => Get.find<SongController>().addToQueue(song),
+                            'Added to queue',
+                          ),
+                        ),
                       const SizedBox(height: Space.sm),
                     ],
                   ),
@@ -102,6 +112,70 @@ class _SongActionsSheet extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _addToPlaylist(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final repository = Get.find<LibraryRepository>();
+    try {
+      final playlists = await repository.listPlaylists();
+      if (!context.mounted) return;
+      if (playlists.isEmpty) {
+        Navigator.of(context).pop();
+        messenger
+          ..clearSnackBars()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Create a playlist in Library first.'),
+            ),
+          );
+        return;
+      }
+
+      final selected = await showDialog<LibraryPlaylist>(
+        context: context,
+        builder: (dialogContext) => SimpleDialog(
+          title: const Text('Add to playlist'),
+          children: [
+            for (final playlist in playlists)
+              SimpleDialogOption(
+                onPressed: () => Navigator.pop(dialogContext, playlist),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: Space.sm),
+                  child: Text(
+                    playlist.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      );
+      if (selected == null || !context.mounted) return;
+
+      await repository.addPlaylistEntry(
+        entryId:
+            'entry-${DateTime.now().microsecondsSinceEpoch}-${song.identity.hashCode}',
+        playlistId: selected.id,
+        track: TrackRef.fromSong(song),
+        position: selected.entryCount,
+      );
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(content: Text('Added to ${selected.name}')),
+        );
+    } catch (_) {
+      if (!context.mounted) return;
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(
+          const SnackBar(content: Text('That track could not be added.')),
+        );
+    }
   }
 
   /// Runs an action, closes the sheet, and says so.

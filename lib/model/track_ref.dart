@@ -121,7 +121,10 @@ class TrackRef {
         TrackSource.local => MySongs(
             songid: 0,
             title: title,
-            songurl: '',
+            // A persisted MediaStore/SAF content URI is the local track's stable
+            // identity and playback locator. Unlike signed network URLs it does
+            // not expire and is deliberately source-qualified by [TrackRef].
+            songurl: providerId,
             coverurl: artworkRef ?? '',
             artist: artist,
             isquickpick: 0,

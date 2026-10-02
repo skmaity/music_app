@@ -14,6 +14,15 @@ enum AppDestination {
   final String stableId;
 }
 
+bool destinationAvailableForSource(
+  TrackSource source,
+  AppDestination destination,
+) {
+  if (source != TrackSource.local) return true;
+  return destination != AppDestination.favourites &&
+      destination != AppDestination.library;
+}
+
 /// Stable destination state, remembered independently for every music source.
 class NavController extends GetxController {
   NavController({TrackSource initialSource = TrackSource.nyroServer})
@@ -32,6 +41,7 @@ class NavController extends GetxController {
   TrackSource get activeSource => _activeSource;
 
   void go(AppDestination next) {
+    if (!destinationAvailableForSource(_activeSource, next)) return;
     final previous = current.value;
     if (next == previous) return;
     direction = next.index > previous.index ? 1 : -1;
@@ -42,7 +52,10 @@ class NavController extends GetxController {
   void activateSource(TrackSource source) {
     if (source == _activeSource) return;
     _bySource[_activeSource] = current.value;
-    final next = _bySource[source] ?? AppDestination.quickPicks;
+    final remembered = _bySource[source] ?? AppDestination.quickPicks;
+    final next = destinationAvailableForSource(source, remembered)
+        ? remembered
+        : AppDestination.songs;
     direction = next.index >= current.value.index ? 1 : -1;
     _activeSource = source;
     current.value = next;

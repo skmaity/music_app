@@ -412,7 +412,11 @@ class _PlayerPageState extends State<PlayerPage>
           }),
         ),
         const SizedBox(width: Space.sm),
-        _favourite(),
+        Obx(
+          () => controller.currentPlaying.value.isLocal
+              ? const SizedBox.shrink()
+              : _favourite(),
+        ),
       ],
     );
   }

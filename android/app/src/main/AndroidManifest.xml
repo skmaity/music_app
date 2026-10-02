@@ -20,15 +20,17 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <!--
-      READ_EXTERNAL_STORAGE and READ_MEDIA_AUDIO were declared here and never
-      used: nothing in lib/ opens a local file, and every track is streamed
-      from the API. Both are "sensitive" permissions on the Play Console —
-      they trigger a declaration form and are a routine rejection cause — so
-      shipping them to buy nothing was a bad trade. If local-file playback is
-      ever added, READ_MEDIA_AUDIO is the one to bring back (API 33+), with
-      READ_EXTERNAL_STORAGE limited to maxSdkVersion="32".
+      Local-library access only. Android 13+ uses the media-specific permission;
+      older releases use legacy read permission capped at API 32. Nyro never
+      requests MANAGE_EXTERNAL_STORAGE or broad all-files access.
+    -->
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"/>
 
-      usesCleartextTraffic was also removed. It permitted plain HTTP for the
+    <!--
+      usesCleartextTraffic remains disabled globally. It permitted plain HTTP for
       whole app, and there is none: apis/all_urls.dart builds every URL from
       an https host, and both the stream and the cover art are relative paths
       prefixed with it (song_controller.dart's setUrl, RemoteImage's url).

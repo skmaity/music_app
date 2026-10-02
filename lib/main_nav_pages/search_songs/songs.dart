@@ -12,7 +12,9 @@ import 'package:music_app/global_widgets/skeleton.dart';
 import 'package:music_app/global_widgets/song_tile.dart';
 import 'package:music_app/main_nav_pages/search_songs/controllers/search_song_controller.dart';
 import 'package:music_app/model/song_model.dart';
+import 'package:music_app/model/track_ref.dart';
 import 'package:music_app/player_page/player_page.dart';
+import 'package:music_app/services/playback_resolver.dart';
 import 'package:music_app/services/youtube_source.dart';
 
 class SearchSongs extends StatefulWidget {
@@ -271,14 +273,18 @@ class _SearchSongsState extends State<SearchSongs> {
                     if (searchSong.source == SongSource.youtube) {
                       setState(() => _resolving = true);
                       try {
-                        final resolved =
-                            await controller.youtube.resolve(searchSong);
+                        await songController.playRadioSeed(
+                          TrackRef.fromSong(searchSong),
+                        );
                         if (!context.mounted ||
                             !_playbackRequests.owns(request)) {
-                          resolved.streamHandle?.close();
                           return;
                         }
-                        playSong(context, resolved, <MySongs>[resolved].obs);
+                      } on PlaybackResolutionException catch (e) {
+                        if (context.mounted &&
+                            _playbackRequests.owns(request)) {
+                          _showPlaybackError(context, e.message);
+                        }
                       } on TimeoutException {
                         if (context.mounted &&
                             _playbackRequests.owns(request)) {

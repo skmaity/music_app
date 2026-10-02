@@ -91,6 +91,9 @@ class _QueueSheet extends StatelessWidget {
                         song: song,
                         index: index,
                         isCurrent: index == currentIndex,
+                        isRecommendationStart:
+                            index == controller.recommendedStartIndex &&
+                                index > currentIndex,
                         onTap: () => controller.jumpToQueueIndex(index),
                         onRemove: () => controller.removeFromQueue(index),
                       );
@@ -116,6 +119,7 @@ class _QueueRow extends StatelessWidget {
     required this.song,
     required this.index,
     required this.isCurrent,
+    required this.isRecommendationStart,
     required this.onTap,
     required this.onRemove,
   });
@@ -123,6 +127,7 @@ class _QueueRow extends StatelessWidget {
   final MySongs song;
   final int index;
   final bool isCurrent;
+  final bool isRecommendationStart;
   final VoidCallback onTap;
   final VoidCallback onRemove;
 
@@ -151,55 +156,71 @@ class _QueueRow extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(
             horizontal: Space.gutter, vertical: Space.xs),
-        child: Material(
-          color: Colors.transparent,
-          child: ListTile(
-            onTap: onTap,
-            tileColor: AppColors.glass1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(Radii.sm),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: Space.md),
-            minVerticalPadding: Space.sm,
-            leading: RemoteImage(
-              url: song.artworkUri(baseUrl).toString(),
-              size: Controls.thumbRow,
-              semanticLabel: 'Cover art for ${song.title}',
-            ),
-            title: Text(
-              song.title,
-              style: text.bodyLarge,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            subtitle: Text(
-              song.artist,
-              style: text.bodySmall?.copyWith(color: AppColors.textSecondary),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // The one "this is playing" mark, same as every other song
-                // list in the app — never a tinted row, which is exactly the
-                // rule [SongTile] exists to enforce.
-                if (isCurrent) const NowPlayingMarker(),
-                ReorderableDragStartListener(
-                  index: index,
-                  child: const Tooltip(
-                    message: 'Drag to reorder',
-                    child: SizedBox(
-                      width: 48,
-                      height: 48,
-                      child: Icon(Icons.drag_handle_rounded,
-                          color: AppColors.textTertiary),
-                    ),
-                  ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isRecommendationStart)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    Space.md, Space.sm, Space.md, Space.xs),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text('Recommended', style: text.bodySmall),
                 ),
-              ],
+              ),
+            Material(
+              color: Colors.transparent,
+              child: ListTile(
+                onTap: onTap,
+                tileColor: AppColors.glass1,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(Radii.sm),
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: Space.md),
+                minVerticalPadding: Space.sm,
+                leading: RemoteImage(
+                  url: song.artworkUri(baseUrl).toString(),
+                  size: Controls.thumbRow,
+                  semanticLabel: 'Cover art for ${song.title}',
+                ),
+                title: Text(
+                  song.title,
+                  style: text.bodyLarge,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  song.artist,
+                  style:
+                      text.bodySmall?.copyWith(color: AppColors.textSecondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // The one "this is playing" mark, same as every other song
+                    // list in the app — never a tinted row, which is exactly the
+                    // rule [SongTile] exists to enforce.
+                    if (isCurrent) const NowPlayingMarker(),
+                    ReorderableDragStartListener(
+                      index: index,
+                      child: const Tooltip(
+                        message: 'Drag to reorder',
+                        child: SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: Icon(Icons.drag_handle_rounded,
+                              color: AppColors.textTertiary),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
